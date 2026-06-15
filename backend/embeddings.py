@@ -29,3 +29,24 @@ def dot(a: list[float], b: list[float]) -> float:
 
 def cosine(a: list[float], b: list[float]) -> float:
     return dot(l2_normalize(a), l2_normalize(b))
+
+
+def _embed_model() -> str:
+    return os.getenv("LLM_EMBED_MODEL", "mistral-embed")
+
+
+def _embed_url() -> str:
+    return os.getenv("LLM_EMBED_API_URL", "https://api.mistral.ai/v1/embeddings")
+
+
+async def embed_texts(texts: list[str]) -> list[list[float]]:
+    """Embed a batch of texts via the Mistral embeddings endpoint."""
+    cfg = llm_client.LLMConfig()
+    if not cfg.api_key:
+        raise RuntimeError("No API key set for embeddings.")
+    payload = {"model": _embed_model(), "input": texts}
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        resp = await client.post(_embed_url(), json=payload, headers=cfg.headers())
+        resp.raise_for_status()
+        data = resp.json()["data"]
+    return [item["embedding"] for item in data]
