@@ -11,6 +11,7 @@ import math
 import re
 from collections import Counter
 
+import embeddings
 from content_loader import Chunk
 
 _STOPWORDS = {
@@ -59,6 +60,29 @@ class Retriever:
         scored = [
             (chunk, self.score(query_tokens, tokens))
             for chunk, tokens in zip(self.chunks, self._tokenized)
+        ]
+        scored = [pair for pair in scored if pair[1] > 0]
+        scored.sort(key=lambda pair: pair[1], reverse=True)
+        return scored[:k]
+
+
+class EmbeddingRetriever:
+    """Semantic retriever over precomputed, L2-normalised chunk vectors."""
+
+    def __init__(self, chunks: list[Chunk], vectors: list[list[float]], keyword: "Retriever"):
+        self.chunks = chunks
+        self.vectors = vectors
+        self.keyword = keyword  # runtime fallback if a query embedding fails
+
+    async def retrieve(self, query: str, k: int = 6) -> list[tuple[Chunk, float]]:
+        try:
+            qvec = embeddings.l2_normalize((await embeddings.embed_texts([query]))[0])
+        except Exception as exc:  # noqa: BLE001 - never surface to the user
+            print(f"[ask-me] query embedding failed ({exc}); falling back to keyword")
+            return await self.keyword.retrieve(query, k)
+        scored = [
+            (chunk, embeddings.dot(qvec, vec))
+            for chunk, vec in zip(self.chunks, self.vectors)
         ]
         scored = [pair for pair in scored if pair[1] > 0]
         scored.sort(key=lambda pair: pair[1], reverse=True)
