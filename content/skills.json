@@ -1,0 +1,64 @@
+{
+  "backend": [
+    "Python",
+    "Django / Django REST",
+    "FastAPI",
+    "Node.js",
+    "NestJS",
+    "Fastify",
+    "PHP / Symfony",
+    "Prisma",
+    "Redis",
+    "Stripe",
+    "WebSocket",
+    "Performance optimization"
+  ],
+  "frontend": [
+    "React",
+    "TypeScript",
+    "Next.js (App Router, SSG/ISR, server actions)",
+    "Advanced hooks & state management",
+    "Tailwind CSS",
+    "React Hook Form + Zod",
+    "PWA",
+    "Canvas",
+    "uPlot"
+  ],
+  "ai_ml": [
+    "Computer Vision",
+    "Deep Learning",
+    "COCO-SSD",
+    "TensorFlow.js",
+    "On-device / edge inference",
+    "AI/ML integration"
+  ],
+  "devops": [
+    "Docker",
+    "Kubernetes",
+    "CI/CD (Vitest, Playwright)",
+    "AWS",
+    "AWS Lambda",
+    "Vercel",
+    "Fly.io",
+    "Prometheus monitoring"
+  ],
+  "security": [
+    "JWT authentication",
+    "Encryption",
+    "Security audit",
+    "GDPR compliance"
+  ],
+  "mobile": [
+    "Swift",
+    "SwiftUI (native iOS)"
+  ],
+  "systems_cpp": [
+    "Modern C++ (C++17)",
+    "OpenGL 3.2 / GLSL",
+    "CMake",
+    "ImGui",
+    "Catch2 (unit testing)",
+    "GLFW",
+    "Numerical methods (RK4, quaternions, state-space models)"
+  ]
+}

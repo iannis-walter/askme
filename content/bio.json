@@ -1,0 +1,28 @@
+{
+  "name": "Iannis Vasselet",
+  "title": "Lead Full-Stack Engineer · Applied AI & Computer Vision",
+  "location": "Aix-en-Provence, France",
+  "summary": "Full-stack engineer with 5+ years shipping robust, secure web applications, including 3+ years in highly sensitive environments (French Judicial Police, CEA) and a platform serving 50,000+ active users. I build across the stack — React/TypeScript/Next on the front, Python (Django, FastAPI) and Node/NestJS on the back — and I ship applied AI as usable products (e.g. on-device computer vision with TensorFlow.js / COCO-SSD). I turn complex requirements into scalable solutions, and I care about the product, not just the code.",
+  "target_roles": [
+    "Applied AI Engineer (Fullstack)",
+    "Lead Full-Stack Engineer"
+  ],
+  "strengths": [
+    "Full-stack delivery (React/TypeScript + Python)",
+    "Applied AI & Computer Vision in production",
+    "Critical / high-security systems",
+    "DevOps & deployment (Docker, K8s, AWS)",
+    "Technical leadership & product sense"
+  ],
+  "languages": [
+    "French (native / bilingual)",
+    "English (full professional)"
+  ],
+  "links": {
+    "portfolio": "https://portfolio-creative.vercel.app",
+    "github": "https://github.com/IannisVasselet",
+    "linkedin": "https://www.linkedin.com/in/iannisvasselet",
+    "twitter": "https://twitter.com/ITaioglou",
+    "email": "iannis.taioglou@gmail.com"
+  }
+}

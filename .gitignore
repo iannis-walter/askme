@@ -1,0 +1,26 @@
+# Node / Next
+node_modules/
+.next/
+out/
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Env
+.env
+.env.local
+.env*.local
+backend/.env
+web/.env.local
+
+# OS
+.DS_Store
+
+# Local tooling
+.claude/

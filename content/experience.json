@@ -1,0 +1,49 @@
+[
+  {
+    "company": "Walter Learning",
+    "role": "Senior Full-Stack Developer",
+    "period": "Jan 2026 – present",
+    "location": "Marseille, France",
+    "context": "EdTech company. Work on a learning platform and surrounding products, end to end.",
+    "actions": [
+      "Design, build and maintain robust, scalable and secure applications (frontend & backend)",
+      "Own code quality: tests, code review, best practices and documentation — including AI-assisted workflows",
+      "Take part in gathering business needs, defining technical solutions and prioritising work",
+      "Build UI with standard HTML/CSS and modern frontend frameworks; integrate data from various back-end services and databases",
+      "Maintain projects and plan for scaling; support the learning platform alongside customer support",
+      "Run continuous technology & AI watch to propose relevant improvements; collaborate with Design, SEO and SEA teams"
+    ],
+    "impact": [
+      "TODO_CONFIRM: a concrete metric or shipped feature you're proud of here"
+    ],
+    "tech": ["React", "TypeScript", "Next.js", "Python", "Django"]
+  },
+  {
+    "company": "Dat@ i — French Judicial Police (Police Judiciaire)",
+    "role": "Full-Stack Web Developer & Project Lead",
+    "period": "Dec 2022 – Sep 2025 (2 yrs 10 mos)",
+    "location": "Marseille, France",
+    "context": "Critical, high-security environment. Built and led an internal management tool used across the organisation.",
+    "actions": [
+      "Full-stack PHP engineer and project lead on an internal management platform",
+      "Owned development end to end in a high-security, sensitive context"
+    ],
+    "impact": [
+      "Platform served 50,000+ active users"
+    ],
+    "tech": ["PHP", "TODO_CONFIRM_FRAMEWORK (Symfony?)", "TODO_CONFIRM_FRONTEND"]
+  },
+  {
+    "company": "CEA (French Alternative Energies and Atomic Energy Commission)",
+    "role": "Full-Stack Web Developer",
+    "period": "Apr 2022 – Aug 2022 (5 mos)",
+    "location": "Saint-Paul-lès-Durance, France",
+    "context": "Internship/contract in a critical research environment.",
+    "actions": [
+      "Full-stack web development in Python using the Django framework",
+      "TODO_CONFIRM: what was the application / who used it?"
+    ],
+    "impact": [],
+    "tech": ["Python", "Django"]
+  }
+]

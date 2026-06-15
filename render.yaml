@@ -1,0 +1,29 @@
+# Render Blueprint for the FastAPI backend (free plan).
+# In Render: New → Blueprint → point at this repo. The free web service sleeps
+# after ~15 min idle, so the first request after a pause has a cold start
+# (~30-50s) — fine for a portfolio.
+#
+# Set the two secret/per-deploy values in the Render dashboard (they are
+# sync:false below, so Render prompts for them and never stores them in git):
+#   - LLM_API_KEY     → your Mistral free-tier key (console.mistral.ai)
+#   - FRONTEND_ORIGIN → your deployed Vercel origin, e.g. https://ask-me.vercel.app
+services:
+  - type: web
+    name: ask-me-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .              # repo root, so content/ is baked into the image
+    dockerCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: LLM_PROVIDER
+        value: mistral
+      - key: LLM_MODEL
+        value: mistral-small-latest
+      - key: LLM_MIN_INTERVAL_S   # respect the Mistral free tier (~1 req/s)
+        value: "1.1"
+      - key: LLM_API_KEY
+        sync: false               # set in dashboard (secret)
+      - key: FRONTEND_ORIGIN
+        sync: false               # set to your Vercel URL (CORS)

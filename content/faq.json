@@ -1,0 +1,26 @@
+[
+  {
+    "question": "Why are you interested in Mistral?",
+    "answer": "DRAFT_REVIEW_AND_MAKE_IT_YOURS: Three honest reasons. First, Mistral is building a European champion in frontier AI with an open, portable approach and a focus on technological sovereignty — and I've spent years shipping software inside critical, sovereign French environments (Judicial Police, CEA), so that mission isn't abstract to me. Second, the Applied AI Engineer role is exactly the kind of work I'm best at: taking a model and turning it into a real, usable product end to end, with strong fullstack execution and product sense. Third, I ship applied AI as products, not demos (on-device computer vision with TensorFlow.js, this very grounded assistant on the Mistral API) — Mistral's bet on efficient, portable, real-world AI matches how I already build."
+  },
+  {
+    "question": "What proves your full-stack ability?",
+    "answer": "I've shipped front and back across multiple stacks for real users: a 50,000+ user internal management platform at the Judicial Police (PHP, project lead), Python/Django backends (Walter Learning, CEA), and modern React/TypeScript/Next.js fronts. My personal projects span the whole chain too — Aria (native iOS in SwiftUI + NestJS backend + web, built solo), Sillage (production-grade Next.js with server actions, Stripe, Prisma, tests and CI), and Hyperion (real-time WebSocket dashboard, Fastify, Docker)."
+  },
+  {
+    "question": "Have you worked with LLMs or AI workflows before?",
+    "answer": "Yes, on both the AI and the product side. I deployed computer vision in production (Vigie: COCO-SSD object detection running 100% on-device in the browser with TensorFlow.js), I use AI-assisted development daily at Walter Learning, and this 'Ask Me' assistant is itself an LLM product built on the Mistral API — grounded retrieval over a structured knowledge base, with visible sources, so answers stay factual."
+  },
+  {
+    "question": "How deep is your C++ / systems engineering?",
+    "answer": "Solid. FlightDynamics is a high-fidelity 6-DoF flight simulator in modern C++17: real-time physics at 100 Hz, RK4 numerical integration, quaternion-based orientation, a modular SOLID architecture, OpenGL rendering, and 58 unit tests at ~95% coverage. It shows comfort with low-level performance, numerical methods and rigorous testing — not just web work."
+  },
+  {
+    "question": "What kind of engineer are you to work with?",
+    "answer": "Autonomous and product-minded. I've led projects in high-constraint, high-security environments, gathered business needs, made the technical calls and shipped. I care about engineering rigor (tests, CI, accessibility, documentation) and about whether the thing is actually useful to the person using it — not just whether it works."
+  },
+  {
+    "question": "What are you looking for next?",
+    "answer": "Applied AI work with real users and real product impact, on a fullstack scope (Python + TypeScript), ideally somewhere ambitious and technically serious. The Applied AI Engineer Fullstack role at Mistral is a direct match."
+  }
+]

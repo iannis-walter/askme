@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      # Root context so the Dockerfile can bake in the content/ knowledge base.
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      - LLM_PROVIDER=${LLM_PROVIDER:-mistral}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-mistral-small-latest}
+      # Space out upstream calls to respect the Mistral free tier (~1 req/s).
+      - LLM_MIN_INTERVAL_S=${LLM_MIN_INTERVAL_S:-1.1}
+      - FRONTEND_ORIGIN=http://localhost:3000
+    volumes:
+      # Live-edit the knowledge base in dev (overlays the baked-in copy).
+      - ./content:/app/content:ro
+    ports:
+      - "8000:8000"
+
+  web:
+    build: ./web
+    environment:
+      - BACKEND_URL=http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
