@@ -15,9 +15,13 @@ hosted open-source model in production.
 ## Why it's built this way
 
 The product rests on the **quality and structure of the knowledge base**, not on
-model sophistication. Retrieval is a small, readable keyword + IDF scorer over a
-handful of JSON/Markdown files — fast, zero-infrastructure, and easy to audit.
-Embeddings are the obvious next upgrade, behind the same interface.
+model sophistication. Retrieval is **semantic** (`mistral-embed`): chunk vectors
+are precomputed into a committed, content-hash-keyed cache
+(`backend/embeddings.json`), so a Render cold start loads instantly with no
+embedding calls at boot. A keyword + IDF scorer remains as the fallback for local
+dev (Ollama, no key) and if a query embedding ever fails. Pick with `RETRIEVER`
+(`auto` | `embeddings` | `keyword`). After editing `content/`, regenerate the
+cache with `python backend/build_embeddings.py` and commit `embeddings.json`.
 
 The split is deliberate:
 
@@ -120,8 +124,10 @@ LLM_API_KEY=<mistral_key> docker compose up --build
 
 ## Editing the content
 
-Everything the assistant can say lives in `content/`. Edit those files and
-restart the backend — no rebuild of the model or the app needed.
+Everything the assistant can say lives in `content/`. Edit those files, then —
+if using embeddings — regenerate the cache with `python backend/build_embeddings.py`
+and commit `backend/embeddings.json`. Restart the backend. (In `keyword` mode,
+just restart — no cache step.)
 
 ## API
 
@@ -162,6 +168,5 @@ than tripping the Mistral free-tier cap.
 
 ## Possible next steps
 
-- Swap the keyword retriever for embeddings (same `Retriever` interface).
 - Per-project detail pages (`/projects/[slug]`).
 - Conversation history persistence.
