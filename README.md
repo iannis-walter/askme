@@ -55,6 +55,16 @@ ask-me/
     └── lib/
 ```
 
+## Security
+
+User-supplied text (chat questions, conversation, and the pasted job description)
+is untrusted. The backend treats it as **data, never instructions**: system
+prompts state this explicitly, untrusted input is wrapped in fenced delimiters
+with a trailing reminder, and Pydantic caps input length and turn count
+(oversized requests get a 422). A lightweight heuristic logs likely injection
+attempts (`backend/guards.py`) for visibility — it does not block, to avoid false
+positives on legitimate job descriptions.
+
 ## The LLM layer (provider-agnostic)
 
 The backend speaks the **OpenAI-compatible Chat Completions API**, so the model
