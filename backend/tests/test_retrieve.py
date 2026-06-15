@@ -45,3 +45,22 @@ def test_embedding_retriever_falls_back_on_embed_error(monkeypatch):
     monkeypatch.setattr(embeddings, "embed_texts", _boom)
     results = asyncio.run(r.retrieve("machine learning", k=1))
     assert results and results[0][0].source_id == "ml"
+
+
+def test_build_retriever_keyword_without_key(monkeypatch):
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("RETRIEVER", "auto")
+    chunks = [Chunk("a", "A", "faq", "hello world")]
+    r = asyncio.run(retrieve.build_retriever(chunks))
+    assert isinstance(r, retrieve.Retriever)
+
+
+def test_build_retriever_embeddings_with_key(monkeypatch):
+    monkeypatch.setattr(embeddings, "embed_texts", _fake_embed)
+    monkeypatch.setenv("LLM_PROVIDER", "mistral")
+    monkeypatch.setenv("LLM_API_KEY", "k")
+    monkeypatch.setenv("RETRIEVER", "auto")
+    chunks = [Chunk("a", "A", "faq", "machine learning")]
+    r = asyncio.run(retrieve.build_retriever(chunks))
+    assert isinstance(r, retrieve.EmbeddingRetriever)
