@@ -21,7 +21,7 @@ import llm_client
 import prompts
 from content_loader import all_chunks, load_documents
 from ratelimit import RateLimiter
-from retrieve import Retriever
+from retrieve import build_retriever
 from schemas import ChatRequest, JobFitRequest, JobFitResponse, Source
 
 load_dotenv()
@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     docs = load_documents(content_dir)
     STATE["docs"] = docs
     STATE["by_id"] = {doc.id: doc for doc in docs}
-    STATE["retriever"] = Retriever(all_chunks(docs))
+    STATE["retriever"] = await build_retriever(all_chunks(docs))
     print(f"[ask-me] loaded {len(docs)} documents, {len(all_chunks(docs))} chunks from {content_dir}")
     yield
     STATE.clear()
@@ -81,8 +81,8 @@ async def chat(
     _burst: None = Depends(chat_burst),
     _rate: None = Depends(chat_rate),
 ):
-    retriever: Retriever = STATE["retriever"]
-    scored = retriever.retrieve(req.message, k=6)
+    retriever = STATE["retriever"]
+    scored = await retriever.retrieve(req.message, k=6)
     chunks = [chunk for chunk, _ in scored]
     sources = _dedupe_sources(scored)
 
@@ -100,10 +100,10 @@ async def chat(
 
 @app.post("/job-fit", response_model=JobFitResponse)
 async def job_fit(req: JobFitRequest, _rate: None = Depends(jobfit_rate)):
-    retriever: Retriever = STATE["retriever"]
+    retriever = STATE["retriever"]
     # Retrieve broadly: blend the job text with role-fit framing.
     query = f"{req.job_description} {req.focus or ''}"
-    scored = retriever.retrieve(query, k=10)
+    scored = await retriever.retrieve(query, k=10)
     chunks = [chunk for chunk, _ in scored]
     sources = _dedupe_sources(scored)
 
