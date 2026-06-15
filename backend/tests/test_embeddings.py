@@ -1,7 +1,9 @@
 import asyncio
+import hashlib
 import math
 
 import embeddings
+from content_loader import Chunk
 
 
 def test_l2_normalize_unit_length():
@@ -62,3 +64,41 @@ def test_embed_texts_batches_and_parses(monkeypatch):
     assert vectors == [[0.0, 1.0], [1.0, 1.0]]
     assert _FakeClient.captured["json"]["input"] == ["alpha", "beta"]
     assert _FakeClient.captured["headers"]["Authorization"] == "Bearer test-key"
+
+
+async def _fake_embed(texts):
+    # Deterministic bag-of-words vector: stable across processes.
+    dim = 32
+    out = []
+    for t in texts:
+        v = [0.0] * dim
+        for tok in t.lower().split():
+            idx = int(hashlib.sha1(tok.encode()).hexdigest(), 16) % dim
+            v[idx] += 1.0
+        out.append(v)
+    return out
+
+
+def test_cache_key_changes_with_text():
+    a = embeddings.cache_key("hello", "mistral-embed")
+    b = embeddings.cache_key("hello!", "mistral-embed")
+    assert a != b
+    assert a.endswith(":mistral-embed")
+
+
+def test_resolve_uses_cache_and_embeds_missing(monkeypatch):
+    monkeypatch.setattr(embeddings, "embed_texts", _fake_embed)
+    chunks = [
+        Chunk("a", "A", "faq", "machine learning python"),
+        Chunk("b", "B", "faq", "swift ios mobile"),
+    ]
+    model = embeddings._embed_model()
+    # Pre-seed the cache for the first chunk only.
+    seeded = asyncio.run(_fake_embed([chunks[0].text]))[0]
+    cache = {embeddings.cache_key(chunks[0].text, model): seeded}
+
+    vectors = asyncio.run(embeddings.resolve_chunk_vectors(chunks, cache))
+
+    assert len(vectors) == 2
+    # Normalised → unit length.
+    assert math.isclose(math.sqrt(sum(x * x for x in vectors[0])), 1.0, rel_tol=1e-9)

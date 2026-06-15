@@ -50,3 +50,29 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
         resp.raise_for_status()
         data = resp.json()["data"]
     return [item["embedding"] for item in data]
+
+
+CACHE_PATH = Path(__file__).with_name("embeddings.json")
+
+
+def cache_key(text: str, model: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest() + ":" + model
+
+
+def load_cache(path: Path = CACHE_PATH) -> dict[str, list[float]]:
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+async def resolve_chunk_vectors(chunks, cache: dict[str, list[float]]) -> list[list[float]]:
+    """Return one L2-normalised vector per chunk, embedding any cache misses."""
+    model = _embed_model()
+    keys = [cache_key(c.text, model) for c in chunks]
+    missing = [c.text for c, key in zip(chunks, keys) if key not in cache]
+    if missing:
+        print(f"[ask-me] embedding {len(missing)} uncached chunk(s)")
+        fresh = await embed_texts(missing)
+        for text, vec in zip(missing, fresh):
+            cache[cache_key(text, model)] = vec
+    return [l2_normalize(cache[key]) for key in keys]
