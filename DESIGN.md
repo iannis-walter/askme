@@ -1,76 +1,72 @@
 # Design System: Ask Me
 
-The visual language for the candidate-briefing app. Treat this as the source of
-truth: new screens and components should read as if they always belonged here.
+The visual language for the candidate-briefing app. Source of truth: new screens
+should read as if they always belonged to this dossier.
 
 ## 1. Visual theme & atmosphere
 
-A **briefing console**: a calm, dark, instrument-panel surface where every answer
-arrives with its telemetry (the sources it drew from). Clinical but warm, like a
-dim studio at dusk with one shaft of low sun. Density is balanced (4/10) — roomy
-reading column, never a dashboard cockpit. Motion is restrained but precise
-(5/10): nothing decorative loops; entrances and presses are crisp and fast.
+An **editorial press dossier**, not a chat tool. Warm paper, near-black ink, a
+single terracotta accent, and large characterful serif headlines. The chat reads
+as a printed **interview transcript** (Question / Response), and sources appear as
+footnote citations. Calm and confident: generous whitespace, an asymmetric reading
+column hung left of center, light restrained motion. Deliberately the opposite of
+the generic dark-mode AI chatbot.
 
-Register: **product** (the design serves the conversation, it is not the show).
+Density 3/10 (airy). Variance 6/10 (asymmetric). Motion 4/10 (restrained).
+Register: **brand-leaning product** (the profile IS the pitch).
 
 ## 2. Color palette & roles
 
-Tinted-neutral base with a single warm accent. Restrained strategy: the accent
-covers well under 10% of any view. Never pure black or pure white.
+Warm-paper light theme. One accent, well under 10% coverage. Never pure black or
+white; every neutral is warmed toward the paper.
 
-- **Ink** (`#0f1116`) — app background, deepest surface
-- **Surface** (`#161922`) — sidebar, cards, composer, drawer
-- **Surface 2** (`#1d212c`) — raised / hover fills, user bubble
-- **Border** (`#2a2f3c`) — structural 1px lines
-- **Border soft** (`#21252f`) — quieter dividers
-- **Text** (`#e8eaf0`) — primary text
-- **Muted** (`#9097a6`) — secondary text, metadata
-- **Faint** (`#6a7080`) — eyebrows, placeholders, captions
-- **Ember** (`#e26d3a`) — THE accent: CTAs, active nav, focus, source caret, streaming caret. The "mistral wind / southern sun." One accent only.
-- **Ember soft** (`rgba(226,109,58,0.12)`) — accent tint fills (active nav, hovered source tag, pills)
-- **Ember line** (`rgba(226,109,58,0.32)`) — accent borders / focus rings
-- **Grounded** (`#5bbf9b`) — reserved exclusively for the grounding indicator (the "N sources" dot). Never use it decoratively.
+- **Paper** (`#f1ece1`) — canvas / page background
+- **Surface** (`#f8f4ea`) — raised surface (drawer, textarea)
+- **Surface 2** (`#ece5d6`) — sunken / hover fill
+- **Ink** (`#221d17`) — primary text and display
+- **Ink soft** (`#463f35`) — answer / body copy
+- **Muted** (`#6c6357`) — secondary text
+- **Faint** (`#a39a89`) — captions, placeholders, labels
+- **Rule** (`#d9d1c0`) / **Rule soft** (`#e7e0d1`) — hairline borders and dividers
+- **Terracotta** (`#b34a2c`) — THE accent: eyebrows, links, CTA fill, active nav, italic emphasis, citation hover. One accent only.
+- **Terracotta soft / line** (`rgba(179,74,44,0.10 / 0.30)`) — accent tints and borders
+- **Grounded** (`#3f7a55`) — reserved only for the "Sourced · N" marker. Never decorative.
 
-Ambient: a single faint ember radial glow, top-left, fixed. No other gradients.
+Ambient: one faint terracotta radial wash, top-right, fixed. No other gradients.
 
 ## 3. Typography
 
-- **Display** — `Instrument Serif`, 400 weight, tight tracking (`-0.01em`). Hero titles, drawer/source titles. Distinctive editorial serif; hierarchy comes from it, not from screaming size.
-- **Body** — `Inter`. 15px, line-height 1.6. Reading column capped ~760px.
-- **Mono** — `IBM Plex Mono`. The telemetry voice: eyebrows, role tags, source tags, nav glyphs, code/source bodies. Uppercase + wide letter-spacing (`0.14–0.18em`) for eyebrows.
-
-Eyebrows are the signature label: 11px mono, uppercase, `--faint`.
+- **Display** — `Fraunces` (400–600), normal + italic. Big editorial headlines; tight tracking (`-0.015em`); italic in terracotta for emphasis (`A profile you can <em>interrogate</em>`). Hierarchy from face and size, not weight alone.
+- **Body / reading** — `Newsreader` serif, 17px, line-height 1.62. Answers, questions, paragraphs, inputs. The "article" voice.
+- **Mono** — `IBM Plex Mono` (400–500). Captions, eyebrows, role tags, nav, source citations, the source-text body. Uppercase + wide tracking (`0.16–0.2em`) for labels.
+- **Banned:** Inter and generic system sans. Generic serifs (Times, Georgia, Garamond).
 
 ## 4. Components
 
-- **Buttons** — flat, no glow. Press feedback is mandatory: `transform: scale()` on `:active` (send 0.92, primary/chip ~0.97) over `120ms var(--ease-out)`. Primary = ember fill on dark ink text.
-- **Source tags** — the signature element: mono "readout" chips with a leading ember caret (`›`), full 1px border, ember-soft tint + ember-line border on hover. (No colored side-stripe borders, ever.)
-- **Grounded indicator** — small glowing `--grounded` dot + "Grounded · N sources" in mono.
-- **Cards** (job-fit report) — `--surface` fill, 1px border, 14px radius, mono uppercase section headers. Used only where elevation earns it; never nested.
-- **Composer / inputs** — `--surface` fill, border lifts to `--ember-line` on focus. No floating labels.
-- **Drawer** — slides in from the right over a dimmed backdrop; `var(--ease-drawer)` curve, ~300ms. Closes on backdrop click or Escape.
-- **Loaders** — skeletal shimmer matching layout dimensions. No spinners.
-- **Streaming caret** — blinking ember `▍` while the answer streams.
+- **Q & A transcript** — each turn is a labelled block separated by a hairline rule: a mono `QUESTION` / `RESPONSE` eyebrow, the question in large Fraunces, the answer in Newsreader.
+- **Source citations** — mono, underline-on-hover footnote links (no chips, no boxes, no side-stripe). Preceded by a green "Sourced · N" marker.
+- **Prompt list** — a bordered editorial list (mono label + serif prompt), not a card grid; rows nudge right and turn terracotta on hover.
+- **Buttons** — terracotta pill with uppercase mono label; `scale()` press feedback. No glow.
+- **Composer** — a single underline that lifts to terracotta on focus. Italic placeholder.
+- **Report (job-fit)** — sections divided by top rules, not cards: mono uppercase header + serif body.
+- **Drawer** — paper panel sliding from the right (`--ease-drawer`, ~320ms); backdrop click or Escape to close.
+- **Loaders** — skeleton shimmer. No spinners. **Streaming caret** — blinking terracotta `▍`.
 
 ## 5. Layout
 
-- Two-column app shell: 248px sidebar + fluid stage. Collapses to a single column with a top bar under 820px.
-- Reading column capped at 760px, centered. Vary vertical spacing for rhythm; avoid uniform padding.
-- Don't wrap everything in a card. Most content is just type on the surface.
+- Two-column shell: a quiet 268px **masthead** (name in Fraunces, mono nav with an active terracotta underline, mono links) + the reading stage. Collapses to a single column with a top bar under 860px.
+- Reading column ~720px, hung **left of center** with a wide right margin for air (asymmetric, not dead-centered).
+- Rules and whitespace do the structuring; avoid boxes and nested cards.
 
 ## 6. Motion
 
-- Curves: `--ease-out: cubic-bezier(0.23,1,0.32,1)` for UI; `--ease-drawer: cubic-bezier(0.32,0.72,0,1)` for the drawer. Never `ease-in`, never `transition: all`.
-- Durations: presses 100–160ms, entrances 360–480ms, drawer ~300ms. Keep UI motion under ~300ms except deliberate entrances.
-- Animate only `transform` and `opacity`. Entrances are `fadeUp` (translateY 8px + opacity), staggered 50–80ms (intro, chips, report cards).
-- Nothing animates from `scale(0)`. No bounce, no elastic, no perpetual loops (except the streaming caret).
-- Always honor `prefers-reduced-motion: reduce` (near-zero durations).
+- Curves: `--ease-out: cubic-bezier(0.23,1,0.32,1)`; `--ease-drawer: cubic-bezier(0.32,0.72,0,1)`. Never `ease-in`, never `transition: all`.
+- `fadeUp` entrances (translateY + opacity), staggered 60–80ms (intro, prompts, turns, report sections). Press feedback `scale(0.94–0.97)`. Drawer slide ~320ms.
+- Animate only `transform` / `opacity`. No `scale(0)`, no bounce, no perpetual loops except the streaming caret. Honor `prefers-reduced-motion`.
 
 ## 7. Anti-patterns (banned)
 
-- No colored side-stripe borders (`border-left`/`right` > 1px as an accent).
-- No gradient text, no glassmorphism-by-default, no neon/outer-glow shadows.
-- No `transition: all`, no `ease-in` on UI, no animating layout properties.
-- No second accent color; `--grounded` is not decorative.
-- No pure `#000` / `#fff`. No identical 3-card grids. No em dashes in copy.
-- No spinners where a skeleton fits. No `scale(0)` entrances.
+- No dark "AI chatbot" shell, no second accent, no neon/glow, no gradient text.
+- No colored side-stripe borders, no chip-grids of identical cards, no spinners.
+- No Inter, no generic serif. No pure `#000`/`#fff`. No em dashes in copy.
+- No `transition: all`, no `ease-in`, no animating layout properties.

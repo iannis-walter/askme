@@ -3,7 +3,7 @@
 export const PROFILE = {
   name: "Iannis Vasselet",
   title: "Lead Full-Stack Engineer · Applied AI",
-  subtitle: "Candidate briefing — ask anything, every answer is sourced.",
+  subtitle: "A briefing you can question.",
   links: {
     github: "https://github.com/IannisVasselet",
     linkedin: "https://www.linkedin.com/in/iannisvasselet",

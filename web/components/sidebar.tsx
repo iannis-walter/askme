@@ -13,15 +13,15 @@ export function Sidebar() {
   const pathname = usePathname();
   return (
     <aside className="sidebar">
-      <div style={{ marginBottom: 22 }}>
-        <div className="eyebrow" style={{ marginBottom: 6 }}>Candidate OS</div>
-        <div className="display" style={{ fontSize: 22 }}>{PROFILE.name}</div>
-        <div style={{ color: "var(--muted)", fontSize: 12.5, marginTop: 2 }}>
+      <div style={{ marginBottom: 32 }}>
+        <div className="eyebrow" style={{ marginBottom: 10 }}>Candidate dossier</div>
+        <div className="display" style={{ fontSize: 30, lineHeight: 1.04 }}>{PROFILE.name}</div>
+        <div className="mono" style={{ color: "var(--muted)", fontSize: 12, marginTop: 9, letterSpacing: "0.01em" }}>
           {PROFILE.title}
         </div>
       </div>
 
-      <nav style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <nav style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {NAV.map((item) => (
           <Link
             key={item.href}

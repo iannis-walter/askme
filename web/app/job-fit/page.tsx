@@ -39,11 +39,12 @@ export default function JobFitPage() {
   return (
     <main className="stage-scroll">
       <div className="jobfit">
-        <div className="eyebrow" style={{ marginBottom: 12 }}>Job fit</div>
-        <h1 className="display" style={{ fontSize: "clamp(28px, 4vw, 40px)" }}>
-          Paste a role. See where it lands.
+        <div className="eyebrow" style={{ marginBottom: 14 }}>Job fit</div>
+        <h1 className="display" style={{ fontSize: "clamp(34px, 5vw, 58px)", lineHeight: 1.04 }}>
+          Paste a role.<br />
+          See <em style={{ fontStyle: "italic", color: "var(--ember)" }}>where it lands.</em>
         </h1>
-        <p style={{ color: "var(--muted)", marginTop: 12, maxWidth: 560 }}>
+        <p style={{ color: "var(--muted)", marginTop: 16, maxWidth: 560, fontSize: 19 }}>
           Drop in a job description. The candidate&apos;s profile is matched against
           it — strengths, honest gaps, the projects worth showing, and a tailored pitch.
         </p>
