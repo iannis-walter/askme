@@ -6,12 +6,12 @@ from pydantic import BaseModel, Field
 
 class Turn(BaseModel):
     role: str  # "user" | "assistant"
-    content: str
+    content: str = Field(max_length=4000)
 
 
 class ChatRequest(BaseModel):
-    message: str
-    conversation: list[Turn] = Field(default_factory=list)
+    message: str = Field(max_length=4000)
+    conversation: list[Turn] = Field(default_factory=list, max_length=20)
 
 
 class Source(BaseModel):
@@ -22,8 +22,8 @@ class Source(BaseModel):
 
 
 class JobFitRequest(BaseModel):
-    job_description: str
-    focus: str | None = None
+    job_description: str = Field(max_length=8000)
+    focus: str | None = Field(default=None, max_length=200)
 
 
 class JobFitResponse(BaseModel):

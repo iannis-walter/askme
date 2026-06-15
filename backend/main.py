@@ -17,6 +17,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
+import guards
 import llm_client
 import prompts
 from content_loader import all_chunks, load_documents
@@ -81,6 +82,8 @@ async def chat(
     _burst: None = Depends(chat_burst),
     _rate: None = Depends(chat_rate),
 ):
+    if guards.looks_like_injection(req.message):
+        print("[ask-me] possible prompt injection detected in chat message")
     retriever = STATE["retriever"]
     scored = await retriever.retrieve(req.message, k=6)
     chunks = [chunk for chunk, _ in scored]
@@ -100,6 +103,10 @@ async def chat(
 
 @app.post("/job-fit", response_model=JobFitResponse)
 async def job_fit(req: JobFitRequest, _rate: None = Depends(jobfit_rate)):
+    if guards.looks_like_injection(req.job_description) or (
+        req.focus and guards.looks_like_injection(req.focus)
+    ):
+        print("[ask-me] possible prompt injection detected in job-fit input")
     retriever = STATE["retriever"]
     # Retrieve broadly: blend the job text with role-fit framing.
     query = f"{req.job_description} {req.focus or ''}"
