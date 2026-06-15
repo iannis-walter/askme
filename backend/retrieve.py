@@ -8,9 +8,12 @@ are the obvious next upgrade, behind the same interface.
 from __future__ import annotations
 
 import math
+import os
 import re
 from collections import Counter
 
+import embeddings
+import llm_client
 from content_loader import Chunk
 
 _STOPWORDS = {
@@ -54,11 +57,54 @@ class Retriever:
                 total += counts[term] * self._idf.get(term, 1.0)
         return total * length_norm
 
-    def retrieve(self, query: str, k: int = 6) -> list[tuple[Chunk, float]]:
+    async def retrieve(self, query: str, k: int = 6) -> list[tuple[Chunk, float]]:
         query_tokens = tokenize(query)
         scored = [
             (chunk, self.score(query_tokens, tokens))
             for chunk, tokens in zip(self.chunks, self._tokenized)
+        ]
+        scored = [pair for pair in scored if pair[1] > 0]
+        scored.sort(key=lambda pair: pair[1], reverse=True)
+        return scored[:k]
+
+
+async def build_retriever(chunks: list[Chunk]):
+    """Pick the retriever: embeddings when Mistral + key, else keyword."""
+    mode = os.getenv("RETRIEVER", "auto").lower()
+    keyword = Retriever(chunks)
+    if mode == "keyword":
+        return keyword
+
+    cfg = llm_client.LLMConfig()
+    can_embed = cfg.provider == "mistral" and bool(cfg.api_key)
+    if not can_embed:
+        if mode == "embeddings":
+            print("[ask-me] RETRIEVER=embeddings but no Mistral key; using keyword")
+        return keyword
+
+    cache = embeddings.load_cache()
+    vectors = await embeddings.resolve_chunk_vectors(chunks, cache)
+    print(f"[ask-me] embedding retriever ready ({len(chunks)} chunks)")
+    return EmbeddingRetriever(chunks, vectors, keyword=keyword)
+
+
+class EmbeddingRetriever:
+    """Semantic retriever over precomputed, L2-normalised chunk vectors."""
+
+    def __init__(self, chunks: list[Chunk], vectors: list[list[float]], keyword: "Retriever"):
+        self.chunks = chunks
+        self.vectors = vectors
+        self.keyword = keyword  # runtime fallback if a query embedding fails
+
+    async def retrieve(self, query: str, k: int = 6) -> list[tuple[Chunk, float]]:
+        try:
+            qvec = embeddings.l2_normalize((await embeddings.embed_texts([query]))[0])
+        except Exception as exc:  # noqa: BLE001 - never surface to the user
+            print(f"[ask-me] query embedding failed ({exc}); falling back to keyword")
+            return await self.keyword.retrieve(query, k)
+        scored = [
+            (chunk, embeddings.dot(qvec, vec))
+            for chunk, vec in zip(self.chunks, self.vectors)
         ]
         scored = [pair for pair in scored if pair[1] > 0]
         scored.sort(key=lambda pair: pair[1], reverse=True)

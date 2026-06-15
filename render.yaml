@@ -23,6 +23,8 @@ services:
         value: mistral-small-latest
       - key: LLM_MIN_INTERVAL_S   # respect the Mistral free tier (~1 req/s)
         value: "1.1"
+      - key: RETRIEVER            # auto → embeddings (Mistral + key), else keyword
+        value: auto
       - key: LLM_API_KEY
         sync: false               # set in dashboard (secret)
       - key: FRONTEND_ORIGIN
