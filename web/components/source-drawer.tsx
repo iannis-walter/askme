@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Source } from "@/lib/types";
 
 interface DrawerData {
@@ -19,7 +19,27 @@ export function SourceDrawer({
 }) {
   const [data, setData] = useState<DrawerData | null>(null);
   const [loading, setLoading] = useState(false);
+  // Keep the drawer mounted through its exit transition.
+  const [render, setRender] = useState(false);
+  const [shown, setShown] = useState(false);
+  const lastSource = useRef<Source | null>(null);
 
+  if (source) lastSource.current = source;
+  const current = source ?? lastSource.current;
+
+  // Drive the enter/exit transition off `source`.
+  useEffect(() => {
+    if (source) {
+      setRender(true);
+      const id = requestAnimationFrame(() => setShown(true));
+      return () => cancelAnimationFrame(id);
+    }
+    setShown(false);
+    const t = setTimeout(() => setRender(false), 320);
+    return () => clearTimeout(t);
+  }, [source]);
+
+  // Fetch the source body when one is opened.
   useEffect(() => {
     if (!source) return;
     setData(null);
@@ -31,23 +51,28 @@ export function SourceDrawer({
       .finally(() => setLoading(false));
   }, [source]);
 
-  if (!source) return null;
+  // Close on Escape.
+  useEffect(() => {
+    if (!source) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [source, onClose]);
+
+  if (!render || !current) return null;
 
   return (
     <>
-      <div className="drawer-backdrop" onClick={onClose} />
-      <div className="drawer" role="dialog" aria-label="Source content">
+      <div className="drawer-backdrop" data-shown={shown} onClick={onClose} />
+      <div className="drawer" data-shown={shown} role="dialog" aria-label="Source content">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
           <div>
-            <div className="eyebrow" style={{ marginBottom: 4 }}>{source.kind}</div>
-            <div className="display" style={{ fontSize: 22 }}>{source.title}</div>
+            <div className="eyebrow" style={{ marginBottom: 4 }}>{current.kind}</div>
+            <div className="display" style={{ fontSize: 22 }}>{current.title}</div>
           </div>
-          <button
-            onClick={onClose}
-            className="mono"
-            style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 18 }}
-            aria-label="Close"
-          >
+          <button onClick={onClose} className="icon-btn mono" aria-label="Close">
             ✕
           </button>
         </div>

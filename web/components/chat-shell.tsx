@@ -117,7 +117,7 @@ export function ChatShell() {
       <div className="stage-scroll" ref={scrollRef}>
         <div className="stage-inner">
           {empty ? (
-            <div style={{ paddingTop: "6vh" }}>
+            <div className="intro" style={{ paddingTop: "6vh" }}>
               <div className="eyebrow" style={{ marginBottom: 14 }}>Ask about this candidate</div>
               <h1 className="display hero-title">
                 Interrogate the profile.<br />Every answer cites its source.

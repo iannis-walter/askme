@@ -20,6 +20,11 @@
 
   /* Used only to mark grounding / source confidence */
   --grounded: #5bbf9b;
+
+  /* Motion — strong custom curves */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 * {
@@ -51,6 +56,44 @@ body {
 
 ::selection {
   background: var(--ember-soft);
+}
+
+/* ---------- Motion primitives ---------- */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered intro for the empty state (eyebrow → title → subtitle → chips) */
+.intro > *:nth-child(1) {
+  animation: fadeUp 480ms var(--ease-out) both 40ms;
+}
+.intro > *:nth-child(2) {
+  animation: fadeUp 480ms var(--ease-out) both 110ms;
+}
+.intro > *:nth-child(3) {
+  animation: fadeUp 480ms var(--ease-out) both 180ms;
+}
+.intro .chip {
+  animation: fadeUp 460ms var(--ease-out) both;
+}
+.intro .chip:nth-child(1) {
+  animation-delay: 250ms;
+}
+.intro .chip:nth-child(2) {
+  animation-delay: 300ms;
+}
+.intro .chip:nth-child(3) {
+  animation-delay: 350ms;
+}
+.intro .chip:nth-child(4) {
+  animation-delay: 400ms;
 }
 
 /* ---------- Typography ---------- */
@@ -108,7 +151,10 @@ body {
   color: var(--muted);
   text-decoration: none;
   font-size: 14px;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, transform 0.12s var(--ease-out);
+}
+.nav-item:active {
+  transform: scale(0.98);
 }
 .nav-item:hover {
   background: var(--surface-2);
@@ -163,6 +209,7 @@ body {
   flex-direction: column;
   gap: 6px;
   margin-bottom: 26px;
+  animation: fadeUp 420ms var(--ease-out) both;
 }
 .msg-user .bubble {
   align-self: flex-end;
@@ -209,14 +256,14 @@ body {
   color: var(--text);
   cursor: pointer;
   font-size: 14px;
-  transition: border-color 0.15s, transform 0.05s, background 0.15s;
+  transition: border-color 0.15s, transform 0.12s var(--ease-out), background 0.15s;
 }
 .chip:hover {
   border-color: var(--ember-line);
   background: var(--surface-2);
 }
 .chip:active {
-  transform: translateY(1px);
+  transform: scale(0.985);
 }
 .chip .chip-label {
   display: block;
@@ -235,6 +282,7 @@ body {
   align-items: center;
   gap: 7px;
   margin-top: 12px;
+  animation: fadeUp 360ms var(--ease-out) both;
 }
 .grounded {
   display: inline-flex;
@@ -253,20 +301,32 @@ body {
   box-shadow: 0 0 8px var(--grounded);
 }
 .source-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-mono);
   font-size: 11.5px;
   color: var(--muted);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 2px solid var(--ember-line);
-  padding: 2px 8px;
-  border-radius: 5px;
+  padding: 2px 9px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s,
+    transform 0.12s var(--ease-out);
+}
+.source-tag::before {
+  content: "›";
+  color: var(--ember);
+  font-weight: 500;
 }
 .source-tag:hover {
   color: var(--text);
-  border-left-color: var(--ember);
+  border-color: var(--ember-line);
+  background: var(--ember-soft);
+}
+.source-tag:active {
+  transform: scale(0.97);
 }
 
 /* Composer */
@@ -317,14 +377,14 @@ body {
   cursor: pointer;
   display: grid;
   place-items: center;
-  transition: opacity 0.15s, transform 0.05s;
+  transition: opacity 0.15s, transform 0.12s var(--ease-out);
 }
 .send-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 .send-btn:not(:disabled):active {
-  transform: translateY(1px);
+  transform: scale(0.92);
 }
 
 /* Cursor blink while streaming */
@@ -352,6 +412,11 @@ body {
   background: rgba(8, 9, 12, 0.55);
   backdrop-filter: blur(2px);
   z-index: 40;
+  opacity: 0;
+  transition: opacity 240ms var(--ease-out);
+}
+.drawer-backdrop[data-shown="true"] {
+  opacity: 1;
 }
 .drawer {
   position: fixed;
@@ -366,6 +431,28 @@ body {
   flex-direction: column;
   padding: 22px;
   overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 300ms var(--ease-drawer);
+}
+.drawer[data-shown="true"] {
+  transform: translateX(0);
+}
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 8px;
+  transition: color 0.15s, transform 0.12s var(--ease-out);
+}
+.icon-btn:hover {
+  color: var(--text);
+}
+.icon-btn:active {
+  transform: scale(0.9);
 }
 .drawer pre {
   white-space: pre-wrap;
@@ -412,10 +499,14 @@ body {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s var(--ease-out);
 }
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.btn-primary:not(:disabled):active {
+  transform: scale(0.97);
 }
 .report-card {
   background: var(--surface);
@@ -423,6 +514,19 @@ body {
   border-radius: 14px;
   padding: 20px 22px;
   margin-top: 16px;
+  animation: fadeUp 440ms var(--ease-out) both;
+}
+.report-card:nth-child(2) {
+  animation-delay: 60ms;
+}
+.report-card:nth-child(3) {
+  animation-delay: 120ms;
+}
+.report-card:nth-child(4) {
+  animation-delay: 180ms;
+}
+.report-card:nth-child(5) {
+  animation-delay: 240ms;
 }
 .report-card h3 {
   font-family: var(--font-mono);
@@ -478,5 +582,17 @@ body {
     padding: 12px 18px;
     border-bottom: 1px solid var(--border-soft);
     background: var(--surface);
+  }
+}
+
+/* ---------- Accessibility: respect reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
