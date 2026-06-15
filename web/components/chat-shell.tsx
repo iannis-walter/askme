@@ -117,14 +117,14 @@ export function ChatShell() {
       <div className="stage-scroll" ref={scrollRef}>
         <div className="stage-inner">
           {empty ? (
-            <div className="intro" style={{ paddingTop: "6vh" }}>
-              <div className="eyebrow" style={{ marginBottom: 14 }}>Ask about this candidate</div>
+            <div className="intro" style={{ paddingTop: "2vh" }}>
+              <div className="eyebrow">Candidate briefing</div>
               <h1 className="display hero-title">
-                Interrogate the profile.<br />Every answer cites its source.
+                A profile you can <em>interrogate.</em>
               </h1>
-              <p style={{ color: "var(--muted)", marginTop: 14, maxWidth: 520 }}>
-                {PROFILE.subtitle} Answers are grounded only in a curated knowledge
-                base — no invented experience.
+              <p style={{ color: "var(--muted)", marginTop: 18, maxWidth: 540, fontSize: 19 }}>
+                {PROFILE.subtitle} Every answer is grounded in a curated knowledge
+                base and shows the files it drew from. Nothing invented.
               </p>
               <div className="chips">
                 {SUGGESTED_PROMPTS.map((p) => (
@@ -138,11 +138,11 @@ export function ChatShell() {
           ) : (
             messages.map((m, i) => (
               <div key={i} className={`msg ${m.role === "user" ? "msg-user" : "msg-assistant"}`}>
+                <span className="role-tag">{m.role === "user" ? "Question" : "Response"}</span>
                 {m.role === "user" ? (
-                  <div className="bubble">{m.content}</div>
+                  <div className="qtext">{m.content}</div>
                 ) : (
                   <>
-                    <span className="role-tag">Assistant</span>
                     <div className={`answer ${m.streaming && !m.content ? "caret" : ""}`}>
                       {m.content}
                       {m.streaming && m.content ? <span className="caret" /> : null}
@@ -177,7 +177,7 @@ export function ChatShell() {
             onClick={() => send(input)}
             aria-label="Send"
           >
-            ↑
+            Ask
           </button>
         </div>
       </div>

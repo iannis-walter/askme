@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
-import { Inter, Instrument_Serif, IBM_Plex_Mono } from "next/font/google";
+import { Fraunces, Newsreader, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-const display = Instrument_Serif({
+// Editorial dossier type system: a characterful display serif, a readable body
+// serif, and a mono for captions / source credits.
+const display = Fraunces({
   subsets: ["latin"],
-  weight: "400",
   variable: "--font-display",
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+});
+const serif = Newsreader({
+  subsets: ["latin"],
+  variable: "--font-serif",
+  weight: ["400", "500"],
+  style: ["normal", "italic"],
 });
 const mono = IBM_Plex_Mono({
   subsets: ["latin"],
@@ -27,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${display.variable} ${mono.variable}`}>
+    <html lang="en" className={`${display.variable} ${serif.variable} ${mono.variable}`}>
       <body>
         <div className="app-grid">
           <Sidebar />
