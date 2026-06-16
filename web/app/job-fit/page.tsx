@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { JobFitResult, Source } from "@/lib/types";
 import { SourceTags } from "@/components/source-tags";
 import { SourceDrawer } from "@/components/source-drawer";
+import { Markdown } from "@/components/markdown";
 
 export default function JobFitPage() {
   const [jd, setJd] = useState("");
@@ -74,7 +75,7 @@ export default function JobFitPage() {
           <div style={{ marginTop: 24 }}>
             <div className="report-card">
               <h3>Overall fit</h3>
-              <p style={{ margin: 0 }}>{result.summary}</p>
+              <Markdown>{result.summary}</Markdown>
             </div>
 
             {result.strengths.length > 0 && (
@@ -101,7 +102,7 @@ export default function JobFitPage() {
             {result.pitch && (
               <div className="report-card">
                 <h3>Suggested pitch</h3>
-                <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{result.pitch}</p>
+                <Markdown>{result.pitch}</Markdown>
               </div>
             )}
 
