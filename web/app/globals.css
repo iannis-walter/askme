@@ -242,13 +242,117 @@ body {
   color: var(--text);
 }
 .msg-assistant .answer {
-  white-space: pre-wrap;
   word-wrap: break-word;
   font-size: 17.5px;
   color: var(--ink-soft);
 }
-.answer p {
+
+/* ---------- Rendered markdown ---------- */
+.md > *:first-child {
+  margin-top: 0;
+}
+.md > *:last-child {
+  margin-bottom: 0;
+}
+.md p {
   margin: 0 0 12px;
+}
+.md ul,
+.md ol {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+.md li {
+  margin-bottom: 6px;
+}
+.md li::marker {
+  color: var(--faint);
+}
+.md strong {
+  font-weight: 600;
+  color: var(--text);
+}
+.md em {
+  font-style: italic;
+}
+.md a {
+  color: var(--ember);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 500;
+  line-height: 1.16;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 18px 0 10px;
+}
+.md h1 {
+  font-size: 26px;
+}
+.md h2 {
+  font-size: 22px;
+}
+.md h3 {
+  font-size: 19px;
+}
+.md h4 {
+  font-size: 17px;
+}
+.md code {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.86em;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.md pre {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  overflow-x: auto;
+  margin: 0 0 12px;
+}
+.md pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.md blockquote {
+  margin: 0 0 12px;
+  padding-left: 14px;
+  border-left: 2px solid var(--ember-line);
+  color: var(--muted);
+  font-style: italic;
+}
+.md hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+.md table {
+  border-collapse: collapse;
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+.md th,
+.md td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+}
+.md th {
+  background: var(--surface-2);
+  font-weight: 600;
 }
 
 /* Prompt list (not a card grid) */

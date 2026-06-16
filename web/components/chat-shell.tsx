@@ -5,6 +5,7 @@ import { PROFILE, SUGGESTED_PROMPTS } from "@/lib/profile";
 import type { Message, Source } from "@/lib/types";
 import { SourceTags } from "@/components/source-tags";
 import { SourceDrawer } from "@/components/source-drawer";
+import { Markdown } from "@/components/markdown";
 
 export function ChatShell() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -144,7 +145,7 @@ export function ChatShell() {
                 ) : (
                   <>
                     <div className={`answer ${m.streaming && !m.content ? "caret" : ""}`}>
-                      {m.content}
+                      <Markdown>{m.content}</Markdown>
                       {m.streaming && m.content ? <span className="caret" /> : null}
                     </div>
                     {m.sources && m.sources.length > 0 && (
