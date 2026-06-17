@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend-tests:
+    name: Backend tests (deterministic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      # Unit tests only. They mock the LLM backend, so they never make a network
+      # call — the agent loop, guardrails and tools are all exercised offline.
+      # The LLM-as-judge eval (eval/run_eval.py) is intentionally NOT run here:
+      # it needs a real provider and would make CI slow, costly and flaky.
+      - name: Run tests
+        working-directory: backend
+        run: python -m pytest -q
