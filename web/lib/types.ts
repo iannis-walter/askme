@@ -13,11 +13,19 @@ export interface Source {
   score?: number;
 }
 
+export interface AgentStep {
+  tool: string;
+  args: Record<string, unknown>;
+  ok: boolean;
+  error?: string | null;
+}
+
 export interface Message {
   role: "user" | "assistant";
   content: string;
   sources?: Source[];
   streaming?: boolean;
+  steps?: AgentStep[];
 }
 
 export interface JobFitResult {
