@@ -42,13 +42,17 @@ ask-me/
 │   ├── faq.json
 │   ├── projects/*.md
 │   └── roles/*.md
-├── backend/            # FastAPI: retrieval, ranking, prompts, Mistral orchestration
+├── backend/            # FastAPI: retrieval, ranking, prompts, LLM orchestration
 │   ├── main.py
 │   ├── content_loader.py
 │   ├── retrieve.py
 │   ├── prompts.py
-│   ├── mistral_client.py
-│   └── schemas.py
+│   ├── llm_client.py
+│   ├── schemas.py
+│   ├── agent.py        # agentic tool-use loop + guardrails (native / ReAct)
+│   ├── tools.py        # the tools the model can call (search_kb, list_topics, evaluate_job_fit)
+│   ├── tracing.py      # per-request structured trace (steps, latency, tokens)
+│   └── eval/           # offline eval suite (deterministic + optional LLM-as-judge)
 └── web/                # Next.js: chat UI, job-fit page, proxy routes
     ├── app/
     ├── components/
@@ -86,6 +90,81 @@ so concurrent visitors queue instead of hitting its ~1 req/s cap).
 > has no GPU, tight memory/time limits, and ephemeral functions — it cannot host
 > an LLM. The model always runs elsewhere; in production that's the Mistral API
 > (free tier), reached over HTTP exactly like any other provider.
+
+## Agent (tool-use loop)
+
+`/chat` is single-shot: retrieve once, inject context, one LLM call. `/chat/agent`
+is the **agentic** counterpart — the model decides *which* tools to call, with
+*what* arguments, *how many* times, until it can answer. Same retriever, same
+prompts, same provider-agnostic client; **no orchestration framework** (no
+LangChain/LlamaIndex) — a single file you can read end to end in
+[`backend/agent.py`](backend/agent.py) (the core loop is ~120 lines; the rest is
+the native/ReAct backends and the graceful-degradation paths).
+
+```
+messages = [system, user]
+loop (≤ MAX_STEPS):
+    resp = llm(messages, tools=TOOLS)
+    ├─ tool_calls?  → validate args → run tool (isolated, timed) → append result → continue
+    └─ no tool_calls → final answer
+else (limit / loop detected) → graceful partial answer (flagged truncated)
+```
+
+**Tools** ([`tools.py`](backend/tools.py)) — each has a Pydantic argument schema,
+a model-facing description, and isolated execution:
+
+- `search_kb(query, top_k)` — wraps the retriever; callable **many times** with
+  different queries to gather everything before answering.
+- `list_topics()` — the KB's sections/themes, to orient a broad question.
+- `evaluate_job_fit(job_description)` — wraps the job-fit logic.
+
+**Multi-provider, one interface.** Function calling is **native** on Mistral /
+Groq / OpenRouter (the `tools` parameter). For models without reliable tool
+support (e.g. local Ollama) a hand-parsed **ReAct** fallback
+(`Thought/Action/Observation`) implements the same loop. Pick with `AGENT_MODE`
+(`auto` | `native` | `react`); `auto` chooses by provider.
+
+**Guardrails** (treated as features, not afterthoughts):
+
+- `AGENT_MAX_STEPS` bounds the loop (default 4); hitting it returns a graceful
+  partial answer, never an error.
+- per-tool and per-LLM-call timeouts (`AGENT_TOOL_TIMEOUT_S`, `AGENT_LLM_TIMEOUT_S`).
+- arguments are **validated before execution**; invalid input is reported back to
+  the model to retry, not crashed.
+- **loop detection**: the same tool with the same arguments twice cuts the loop.
+- every failure mode degrades to a clean answer — no raw exception reaches the client.
+- tool results re-enter the prompt **fenced as untrusted data**, preserving the
+  existing anti-injection hardening.
+
+**Streaming** is preserved: the front-end gets the same `sources` / `delta` /
+`done` NDJSON it already understood, plus a `step` event per tool call. The
+optional **Agent** toggle in the chat UI renders those steps inline.
+
+**Tracing / observability** ([`tracing.py`](backend/tracing.py)) — every request
+gets a `request_id` and a structured trace: each step (LLM turn or tool call),
+its latency, tokens in/out, provider/model, arguments, a truncated result, and a
+`stop_reason` (`completed` | `max_steps` | `loop_detected` | `error`). Read it at
+`GET /trace/{request_id}`, or attach it to the final event with `?debug=1`.
+
+**Eval suite** ([`backend/eval/`](backend/eval/)) — `cases.json` holds ~14 cases
+(`question`, `expected_facts`, `must_cite`, plus injection/honesty traps). The
+runner executes the agent per case and scores it two ways:
+
+- **deterministic** — expected facts present, forbidden strings absent, sources
+  cited, step count and token cost. Reproducible.
+- **LLM-as-judge** (optional, `--judge`) — a second model rates faithfulness and
+  completeness 0–5 with a strict rubric. Kept **out of CI** (cost/flakiness).
+
+```bash
+cd backend
+python eval/run_eval.py                      # deterministic, console report
+python eval/run_eval.py --judge --json out.json   # + LLM judge + JSON report
+python eval/run_eval.py --case backend-vs-ai       # one case (shows multi-search)
+```
+
+The deterministic unit tests (`backend/tests/`) mock the LLM, so they exercise
+the loop, guardrails and tools **offline** — that's what runs in CI
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Running it locally
 
@@ -143,8 +222,10 @@ just restart — no cache step.)
 
 | Method | Route        | Purpose                                              |
 | ------ | ------------ | ---------------------------------------------------- |
-| POST   | `/chat`      | Streamed answer (NDJSON: `sources` → `delta`s → `done`) |
+| POST   | `/chat`      | Single-shot streamed answer (NDJSON: `sources` → `delta`s → `done`) |
+| POST   | `/chat/agent`| Agentic answer: tool-use loop, streams `sources` / `step` / `delta` / `done` (`?debug=1` attaches the trace) |
 | POST   | `/job-fit`   | Structured fit report for a pasted job description   |
+| GET    | `/trace/{request_id}` | Structured trace of an agent request (steps, latency, tokens) |
 | GET    | `/sources`   | Raw content of one source, for the UI drawer         |
 | GET    | `/health`    | Liveness + document count                            |
 

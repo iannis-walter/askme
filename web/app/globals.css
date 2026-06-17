@@ -715,6 +715,56 @@ body {
   }
 }
 
+/* ---------- Agent: mode toggle + tool-call trace chips ---------- */
+.composer-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 9px;
+  padding: 0 2px;
+}
+.agent-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.agent-toggle:hover {
+  border-color: var(--ember-line);
+  color: var(--text);
+}
+.agent-toggle[aria-pressed="true"] {
+  color: var(--ember);
+  border-color: var(--ember-line);
+}
+.composer-hint {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+}
+.agent-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 2px 0 12px;
+}
+.agent-step {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+  padding: 3px 9px;
+  border-left: 2px solid var(--ember-line);
+  background: var(--surface);
+  border-radius: 0 8px 8px 0;
+}
+
 /* ---------- Accessibility ---------- */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PROFILE, SUGGESTED_PROMPTS } from "@/lib/profile";
-import type { Message, Source } from "@/lib/types";
+import type { AgentStep, Message, Source } from "@/lib/types";
 import { SourceTags } from "@/components/source-tags";
 import { SourceDrawer } from "@/components/source-drawer";
 import { Markdown } from "@/components/markdown";
@@ -11,6 +11,7 @@ export function ChatShell() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [agentMode, setAgentMode] = useState(false);
   const [openSource, setOpenSource] = useState<Source | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -29,11 +30,11 @@ export function ChatShell() {
     setMessages((prev) => [
       ...prev,
       { role: "user", content: message },
-      { role: "assistant", content: "", sources: [], streaming: true },
+      { role: "assistant", content: "", sources: [], steps: [], streaming: true },
     ]);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch(agentMode ? "/api/chat/agent" : "/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, conversation: history }),
@@ -60,7 +61,15 @@ export function ChatShell() {
           const line = buffer.slice(0, idx).trim();
           buffer = buffer.slice(idx + 1);
           if (!line) continue;
-          let evt: { type: string; text?: string; sources?: Source[] };
+          let evt: {
+            type: string;
+            text?: string;
+            sources?: Source[];
+            tool?: string;
+            args?: Record<string, unknown>;
+            ok?: boolean;
+            error?: string | null;
+          };
           try {
             evt = JSON.parse(line);
           } catch {
@@ -68,6 +77,14 @@ export function ChatShell() {
           }
           if (evt.type === "sources") {
             update((m) => ({ ...m, sources: evt.sources ?? [] }));
+          } else if (evt.type === "step") {
+            const step: AgentStep = {
+              tool: evt.tool ?? "",
+              args: evt.args ?? {},
+              ok: evt.ok ?? true,
+              error: evt.error,
+            };
+            update((m) => ({ ...m, steps: [...(m.steps ?? []), step] }));
           } else if (evt.type === "delta") {
             update((m) => ({ ...m, content: m.content + (evt.text ?? "") }));
           } else if (evt.type === "done") {
@@ -104,6 +121,12 @@ export function ChatShell() {
     if (!ta) return;
     ta.style.height = "auto";
     ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
+  }
+
+  function formatArgs(args: Record<string, unknown>): string {
+    const entries = Object.entries(args);
+    if (entries.length === 0) return "";
+    return entries.map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(" ");
   }
 
   const empty = messages.length === 0;
@@ -144,6 +167,25 @@ export function ChatShell() {
                   <div className="qtext">{m.content}</div>
                 ) : (
                   <>
+                    {m.steps && m.steps.length > 0 && (
+                      <div className="agent-steps">
+                        {m.steps.map((s, si) => (
+                          <span
+                            key={si}
+                            className="agent-step"
+                            style={{ opacity: s.ok ? 1 : 0.6 }}
+                            title={s.error ?? JSON.stringify(s.args)}
+                          >
+                            <span className="mono" style={{ color: "var(--ember)" }}>
+                              {s.ok ? "▸" : "✕"} {s.tool}
+                            </span>
+                            <span className="mono" style={{ color: "var(--muted)", fontSize: 11 }}>
+                              {formatArgs(s.args)}
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div className={`answer ${m.streaming && !m.content ? "caret" : ""}`}>
                       <Markdown>{m.content}</Markdown>
                       {m.streaming && m.content ? <span className="caret" /> : null}
@@ -160,6 +202,20 @@ export function ChatShell() {
       </div>
 
       <div className="composer-wrap">
+        <div className="composer-controls">
+          <button
+            type="button"
+            className="mono agent-toggle"
+            onClick={() => setAgentMode((v) => !v)}
+            aria-pressed={agentMode}
+            title="Agent mode: the model calls tools in a loop (searching the knowledge base itself, possibly several times) instead of a single-shot answer. The steps are shown above each answer."
+          >
+            {agentMode ? "● Agent mode" : "○ Agent mode"}
+          </button>
+          <span className="mono composer-hint">
+            {agentMode ? "tool-use loop · steps shown" : "single-shot · one retrieval"}
+          </span>
+        </div>
         <div className="composer">
           <textarea
             ref={taRef}
