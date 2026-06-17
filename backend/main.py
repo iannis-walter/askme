@@ -7,16 +7,19 @@ layer over this.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+import uuid
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
+import agent
 import guards
 import llm_client
 import prompts
@@ -24,6 +27,8 @@ from content_loader import all_chunks, load_documents
 from ratelimit import RateLimiter
 from retrieve import build_retriever
 from schemas import ChatRequest, JobFitRequest, JobFitResponse, Source
+from tools import ToolContext
+from tracing import TraceStore
 
 load_dotenv()
 
@@ -49,6 +54,10 @@ app = FastAPI(title="Ask Me — Candidate API", lifespan=lifespan)
 chat_burst = RateLimiter(limit=5, window_s=1.0)     # no bursts
 chat_rate = RateLimiter(limit=30, window_s=60.0)    # sustained per minute
 jobfit_rate = RateLimiter(limit=10, window_s=60.0)  # heavier call, tighter cap
+agent_rate = RateLimiter(limit=12, window_s=60.0)   # multi-call loop, tightest cap
+
+# In-memory trace store for /trace/{request_id} and debug responses.
+TRACES = TraceStore(capacity=200)
 
 app.add_middleware(
     CORSMiddleware,
@@ -99,6 +108,87 @@ async def chat(
         yield (json.dumps({"type": "done"}) + "\n").encode()
 
     return StreamingResponse(event_stream(), media_type="application/x-ndjson")
+
+
+def _ndjson(obj: dict) -> bytes:
+    return (json.dumps(obj) + "\n").encode()
+
+
+def _stream_chunks(text: str, size: int = 24) -> list[str]:
+    """Slice a finished answer into small deltas so the UI renders it progressively."""
+    return [text[i : i + size] for i in range(0, len(text), size)] or [""]
+
+
+@app.post("/chat/agent")
+async def chat_agent(
+    req: ChatRequest,
+    request: Request,
+    _burst: None = Depends(chat_burst),
+    _rate: None = Depends(agent_rate),
+):
+    """Agentic counterpart of /chat: the model drives its own tool calls in a loop.
+
+    Streams NDJSON the front-end already understands (`sources`, `delta`, `done`)
+    plus a `step` event per tool call. `?debug=1` (or AGENT_DEBUG=1) attaches the
+    full trace to the final event.
+    """
+    if guards.looks_like_injection(req.message):
+        print("[ask-me] possible prompt injection detected in agent message")
+
+    request_id = uuid.uuid4().hex
+    debug = request.query_params.get("debug") in ("1", "true") or os.getenv("AGENT_DEBUG") in ("1", "true")
+    ctx = ToolContext(retriever=STATE["retriever"], docs=STATE["docs"])
+    history = [t.model_dump() for t in req.conversation]
+
+    queue: asyncio.Queue = asyncio.Queue()
+
+    async def on_event(evt: dict) -> None:
+        await queue.put(evt)
+
+    async def runner() -> None:
+        try:
+            outcome = await agent.run_agent(
+                req.message, history, ctx, request_id=request_id, on_event=on_event
+            )
+            await queue.put({"type": "__final__", "outcome": outcome})
+        except Exception as exc:  # noqa: BLE001 - last-resort guard; run_agent already degrades
+            await queue.put({"type": "__error__", "error": str(exc)})
+
+    async def event_stream() -> AsyncIterator[bytes]:
+        task = asyncio.create_task(runner())
+        yield _ndjson({"type": "meta", "request_id": request_id})
+        try:
+            while True:
+                evt = await queue.get()
+                kind = evt.get("type")
+                if kind == "__final__":
+                    outcome = evt["outcome"]
+                    TRACES.put(outcome.trace)
+                    yield _ndjson({"type": "sources", "sources": outcome.sources})
+                    for chunk in _stream_chunks(outcome.answer):
+                        yield _ndjson({"type": "delta", "text": chunk})
+                    done = {"type": "done", "request_id": request_id, "truncated": outcome.truncated}
+                    if debug:
+                        done["trace"] = outcome.trace.to_dict()
+                    yield _ndjson(done)
+                    break
+                if kind == "__error__":
+                    yield _ndjson({"type": "delta", "text": "Something went wrong while answering."})
+                    yield _ndjson({"type": "done", "request_id": request_id, "truncated": True})
+                    break
+                yield _ndjson(evt)
+        finally:
+            await task
+
+    return StreamingResponse(event_stream(), media_type="application/x-ndjson")
+
+
+@app.get("/trace/{request_id}")
+async def get_trace(request_id: str):
+    trace = TRACES.get(request_id)
+    if not trace:
+        return {"error": "not found"}
+    return trace.to_dict()
 
 
 @app.post("/job-fit", response_model=JobFitResponse)

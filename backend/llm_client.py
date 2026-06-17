@@ -22,6 +22,7 @@ import json
 import os
 import time
 from collections.abc import AsyncIterator
+from dataclasses import dataclass, field
 
 import httpx
 
@@ -127,6 +128,65 @@ async def stream_chat(messages: list[dict]) -> AsyncIterator[str]:
                         yield delta
                 except (json.JSONDecodeError, KeyError, IndexError):
                     continue
+
+
+@dataclass
+class ChatResult:
+    """One non-streamed assistant turn plus token accounting.
+
+    `message` is the raw assistant message dict (`role`, `content`, and an
+    optional `tool_calls` list). `usage` carries the provider's token counts
+    when reported (`{}` otherwise). This is the building block of the agent
+    loop: each reasoning step is one ChatResult.
+    """
+
+    message: dict
+    usage: dict = field(default_factory=dict)
+
+    @property
+    def tool_calls(self) -> list[dict]:
+        return self.message.get("tool_calls") or []
+
+    @property
+    def content(self) -> str:
+        return self.message.get("content") or ""
+
+
+async def complete_chat(
+    messages: list[dict],
+    *,
+    tools: list[dict] | None = None,
+    tool_choice: str = "auto",
+    stop: list[str] | None = None,
+    timeout: float = 60.0,
+) -> ChatResult:
+    """One non-streamed completion that may request tool calls.
+
+    Tool-aware sibling of `complete_json`/`stream_chat`. When `tools` is given,
+    the model can answer with `tool_calls` (OpenAI-compatible — Mistral, Groq,
+    OpenRouter). `stop` lets the ReAct fallback halt generation at the
+    `Observation:` boundary. The existing single-shot helpers stay untouched.
+    """
+    cfg = _config()
+    if cfg.needs_key and not cfg.api_key:
+        raise RuntimeError(f"No API key set for provider '{cfg.provider}'.")
+
+    await _respect_rate_limit()
+    payload: dict = {"model": cfg.model, "messages": messages, "temperature": 0.2}
+    if tools:
+        payload["tools"] = tools
+        payload["tool_choice"] = tool_choice
+    if stop:
+        payload["stop"] = stop
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        resp = await client.post(cfg.url, json=payload, headers=cfg.headers())
+        resp.raise_for_status()
+        body = resp.json()
+
+    message = body["choices"][0]["message"]
+    usage = body.get("usage") or {}
+    return ChatResult(message=message, usage=usage)
 
 
 async def complete_json(messages: list[dict]) -> dict:
