@@ -1,72 +1,118 @@
-# Design System: Ask Me
+# Design System: Ask Iannis!
 
 The visual language for the candidate-briefing app. Source of truth: new screens
-should read as if they always belonged to this dossier.
+should read as if they were the next page of the same comic.
 
-## 1. Visual theme & atmosphere
+## 1. Idea, constraint, gesture
 
-An **editorial press dossier**, not a chat tool. Warm paper, near-black ink, a
-single terracotta accent, and large characterful serif headlines. The chat reads
-as a printed **interview transcript** (Question / Response), and sources appear as
-footnote citations. Calm and confident: generous whitespace, an asymmetric reading
-column hung left of center, light restrained motion. Deliberately the opposite of
-the generic dark-mode AI chatbot.
+- **Idea**: the profile is a pop comic book, *Ask Iannis!*. The recruiter asks in
+  speech balloons, Iannis (drawn as a masked hero) answers, and every citation is
+  an **editor's note** ("*See Issue #04: Hyperion! —Ed.") pointing to where it
+  happened. Projects are **issues** of the series; knowledge files are "the Files".
+- **Constraint**: only comic-book conventions. Panels with gutters, speech
+  balloons, captions, sound effects, Ben-Day dots, issue covers. No generic UI
+  cards, no icons, no gradients other than the halftone dots.
+- **Signature gesture**: when an answer cites a source, its editor's note pops in
+  and the cited issue cover slides into the "Back issues cited" panel, stamped
+  **SOURCED!**.
 
-Density 3/10 (airy). Variance 6/10 (asymmetric). Motion 4/10 (restrained).
-Register: **brand-leaning product** (the profile IS the pitch).
+Register: **brand-leaning product** (the profile IS the pitch). Density 6/10,
+variance 8/10, motion 5/10.
 
-## 2. Color palette & roles
+## 2. Color (four plates + ink, printed on newsprint)
 
-Warm-paper light theme. One accent, well under 10% coverage. Never pure black or
-white; every neutral is warmed toward the paper.
+- **Newsprint** (`#f4ebd8`) — page background, the paper
+- **Balloon** (`#fffdf6`) — speech balloons, cards, inputs
+- **Ink** (`#111111`) — every border, outline, hard shadow and most text
+- **Electric blue** (`#2d2df5`) — cover, question panels, "honest gaps"
+- **Dot blue** (`#7c82ff`) — Ben-Day dots on blue only
+- **Yellow** (`#ffd23f`) — captions, answer panels, logo, active tabs
+- **Orange** (`#ff7a1a`) — ribbons, sound effects
+- **Red** (`#e8322b`) — bursts, price box, citation markers, the streaming caret
+- **Muted** (`#6a5f4e`) — small print (file paths, hints)
 
-- **Paper** (`#f1ece1`) — canvas / page background
-- **Surface** (`#f8f4ea`) — raised surface (drawer, textarea)
-- **Surface 2** (`#ece5d6`) — sunken / hover fill
-- **Ink** (`#221d17`) — primary text and display
-- **Ink soft** (`#463f35`) — answer / body copy
-- **Muted** (`#6c6357`) — secondary text
-- **Faint** (`#a39a89`) — captions, placeholders, labels
-- **Rule** (`#d9d1c0`) / **Rule soft** (`#e7e0d1`) — hairline borders and dividers
-- **Terracotta** (`#b34a2c`) — THE accent: eyebrows, links, CTA fill, active nav, italic emphasis, citation hover. One accent only.
-- **Terracotta soft / line** (`rgba(179,74,44,0.10 / 0.30)`) — accent tints and borders
-- **Grounded** (`#3f7a55`) — reserved only for the "Sourced · N" marker. Never decorative.
-
-Ambient: one faint terracotta radial wash, top-right, fixed. No other gradients.
+A paper-grain texture (`/art/paper-grain.jpg`) sits over everything in
+`multiply`. Dots fade from the top-right corner of blue surfaces.
 
 ## 3. Typography
 
-- **Display** — `Fraunces` (400–600), normal + italic. Big editorial headlines; tight tracking (`-0.015em`); italic in terracotta for emphasis (`A profile you can <em>interrogate</em>`). Hierarchy from face and size, not weight alone.
-- **Body / reading** — `Newsreader` serif, 17px, line-height 1.62. Answers, questions, paragraphs, inputs. The "article" voice.
-- **Mono** — `IBM Plex Mono` (400–500). Captions, eyebrows, role tags, nav, source citations, the source-text body. Uppercase + wide tracking (`0.16–0.2em`) for labels.
-- **Banned:** Inter and generic system sans. Generic serifs (Times, Georgia, Garamond).
+- **Logo** — `Luckiest Guy`: the cover title and the "Crossover!" title only.
+  Yellow fill, thick ink outline (`-webkit-text-stroke` + `paint-order`), hard
+  ink shadow, rotated −3°.
+- **Lettering** — `Bangers`: captions, sound effects, tabs, buttons, issue
+  titles. Always uppercase.
+- **Balloons / body** — `Bricolage Grotesque`: questions at 800, answers at 500,
+  emphasis at 800.
+- **Mono** — `Space Mono`: file paths, tool calls, folio, small print.
 
 ## 4. Components
 
-- **Q & A transcript** — each turn is a labelled block separated by a hairline rule: a mono `QUESTION` / `RESPONSE` eyebrow, the question in large Fraunces, the answer in Newsreader.
-- **Source citations** — mono, underline-on-hover footnote links (no chips, no boxes, no side-stripe). Preceded by a green "Sourced · N" marker.
-- **Prompt list** — a bordered editorial list (mono label + serif prompt), not a card grid; rows nudge right and turn terracotta on hover.
-- **Buttons** — terracotta pill with uppercase mono label; `scale()` press feedback. No glow.
-- **Composer** — a single underline that lifts to terracotta on focus. Italic placeholder.
-- **Report (job-fit)** — sections divided by top rules, not cards: mono uppercase header + serif body.
-- **Drawer** — paper panel sliding from the right (`--ease-drawer`, ~320ms); backdrop click or Escape to close.
-- **Loaders** — skeleton shimmer. No spinners. **Streaming caret** — blinking terracotta `▍`.
+- **Masthead** — publisher bar: small lettered logo, folio, section tabs
+  (`Ask` / `Job fit`, active one yellow with hard shadow), links.
+- **Panel** — 3px ink border, gutter 14px, a **caption** box hung on the
+  top-left corner ("A recruiter asks…", "Iannis answers:"). Tones: blue (with
+  dots), yellow, cream, newsprint.
+- **Speech balloon** — cream, 3px ink border, 40px radius, hard 5px shadow,
+  SVG tail left or right.
+- **Burst** — 24-point star in red with yellow lettering ("Ask!", "Sourced!",
+  "11 sources inside!").
+- **Issue cover** — a project as an issue: yellow masthead strip, red price box
+  (`#04`), pop-art art, lettered title, mono tagline. Scales with `--w`.
+- **Editor's note** — the citation: cream box, 2px border, rotated ±1°, red
+  marker (`*`, `**`, `***`, `†`…), file path in mono. Opens the source.
+- **Tool calls** ("Meanwhile, in the archives…") — mono cards, one per agent
+  step, with a "Riffle! Riffle!" sound effect.
+- **Composer** — the question is a speech balloon; mode tabs (`One-shot` /
+  `Agent loop`); the send button is an **Ask!** burst.
+- **Source drawer** — a back issue pulled from the archives: caption, cover,
+  lettered title, mono source text.
 
 ## 5. Layout
 
-- Two-column shell: a quiet 268px **masthead** (name in Fraunces, mono nav with an active terracotta underline, mono links) + the reading stage. Collapses to a single column with a top bar under 860px.
-- Reading column ~720px, hung **left of center** with a wide right margin for air (asymmetric, not dead-centered).
-- Rules and whitespace do the structuring; avoid boxes and nested cards.
+- **Cover** (empty state): giant logo, ribbon tagline, hero balloon, teasers
+  ("In this issue:") that send the suggested questions, the masked hero, a
+  burst and a blurb, back issues that ask about each project.
+- **Page** (conversation): one **tier** per turn. Row 1: question panel
+  (+ archive panel in agent mode). Row 2: answer panel (+ back issues cited).
+- **Job fit**: a "Special crossover issue!": title panel, the role panel, then
+  findings as panels (overall fit, strongest matches, honest gaps, projects to
+  show as issue covers, suggested pitch).
+- Max width 1240px. Under 860px every tier stacks to one column, the mic art
+  hides, the hero shrinks and sits under the balloon.
 
-## 6. Motion
+## 6. Art
 
-- Curves: `--ease-out: cubic-bezier(0.23,1,0.32,1)`; `--ease-drawer: cubic-bezier(0.32,0.72,0,1)`. Never `ease-in`, never `transition: all`.
-- `fadeUp` entrances (translateY + opacity), staggered 60–80ms (intro, prompts, turns, report sections). Press feedback `scale(0.94–0.97)`. Drawer slide ~320ms.
-- Animate only `transform` / `opacity`. No `scale(0)`, no bounce, no perpetual loops except the streaming caret. Honor `prefers-reduced-motion`.
+All art is processed in-house into pop-art halftone (posterised plates, Ben-Day
+dots, ink outlines) from:
 
-## 7. Anti-patterns (banned)
+- the masked hero: the owner's GitHub avatar (used with permission);
+- "Elegant steel microphone" (Unsplash via Wikimedia Commons, CC0);
+- "Container ship in Koper 2013" (Wikimedia Commons, CC0) — Vigie;
+- "Apollo 9 Mission Control, S69-26107" (NASA, public domain) — Hyperion;
+- "Petit Champlain at night, Quebec city" (Wikimedia Commons, CC0) — Aria;
+- "Cessna 172 3-view line drawing" (Wikimedia Commons, public domain) — Flight Dynamics;
+- "Prince Christian Sound Iceberg Glacier" (Wikimedia Commons, CC0) — Sillage;
+- "Old Paper texture" (Wikimedia Commons, public domain) — paper grain.
 
-- No dark "AI chatbot" shell, no second accent, no neon/glow, no gradient text.
-- No colored side-stripe borders, no chip-grids of identical cards, no spinners.
-- No Inter, no generic serif. No pure `#000`/`#fff`. No em dashes in copy.
-- No `transition: all`, no `ease-in`, no animating layout properties.
+Files live in `web/public/art/`. Replace an issue's art by dropping a 340×412
+PNG with the same name.
+
+## 7. Motion
+
+- Curves: `--ease-out: cubic-bezier(0.23,1,0.32,1)`, `--ease-pop:
+  cubic-bezier(0.34,1.56,0.64,1)` (stickers, notes, bursts only),
+  `--ease-drawer: cubic-bezier(0.32,0.72,0,1)`.
+- Panels rise in (`translate` + opacity). Notes, tool calls and teasers pop in,
+  staggered ~100ms. Bursts land as a **stamp** (scale 1.8 → 1). Cited covers
+  slide in from the right. Drawer slides ~320ms.
+- Keyframes use the individual `translate` / `scale` / `rotate` properties so
+  they compose with the static tilt of stickers.
+- Perpetual loops: only the streaming caret and the "Crunch!" loading sound
+  effect. Everything honors `prefers-reduced-motion`.
+
+## 8. Anti-patterns (banned)
+
+- No soft blurred shadows: shadows are hard and ink-coloured.
+- No rounded generic cards or icon sets: use balloons, captions, notes, covers.
+- No gradients except the halftone dot mask. No second hero illustration style.
+- No `transition: all`, no animating layout properties.
