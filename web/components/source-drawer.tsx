@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Source } from "@/lib/types";
+import { fileLabel, issueFor } from "@/lib/issues";
+import { Caption, IssueCover } from "@/components/comic";
 
 interface DrawerData {
   id: string;
   title: string;
   kind: string;
-  text: string;
+  text?: string;
 }
 
 export function SourceDrawer({
@@ -62,26 +64,29 @@ export function SourceDrawer({
   }, [source, onClose]);
 
   if (!render || !current) return null;
+  const issue = issueFor(current);
 
   return (
     <>
       <div className="drawer-backdrop" data-shown={shown} onClick={onClose} />
       <div className="drawer" data-shown={shown} role="dialog" aria-label="Source content">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
-          <div>
-            <div className="eyebrow" style={{ marginBottom: 4 }}>{current.kind}</div>
-            <div className="display" style={{ fontSize: 22 }}>{current.title}</div>
-          </div>
-          <button onClick={onClose} className="icon-btn mono" aria-label="Close">
-            ✕
+        <div className="drawer-head">
+          <Caption>{issue ? `Back issue ${issue.no}` : "From the Files"}</Caption>
+          <button onClick={onClose} className="drawer-close" aria-label="Close">
+            Close ✕
           </button>
         </div>
-        <div style={{ marginTop: 18 }}>
-          {loading && <div className="mono" style={{ color: "var(--faint)" }}>Loading source…</div>}
-          {data && <pre>{data.text}</pre>}
-          {!loading && !data && (
-            <div className="mono" style={{ color: "var(--faint)" }}>Source not found.</div>
-          )}
+        <div className="drawer-title-row">
+          {issue && <IssueCover issue={issue} className="drawer-cover" />}
+          <div>
+            <h2 className="drawer-title">{issue?.title ?? current.title}</h2>
+            <p className="drawer-file">{fileLabel(current)}</p>
+          </div>
+        </div>
+        <div className="drawer-body">
+          {loading && <p className="drawer-status">Pulling the file from the archives…</p>}
+          {data?.text && <pre>{data.text}</pre>}
+          {!loading && !data?.text && <p className="drawer-status">Source not found.</p>}
         </div>
       </div>
     </>

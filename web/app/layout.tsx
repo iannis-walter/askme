@@ -1,32 +1,19 @@
 import type { Metadata } from "next";
-import { Fraunces, Newsreader, IBM_Plex_Mono } from "next/font/google";
+import { Bangers, Bricolage_Grotesque, Luckiest_Guy, Space_Mono } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/sidebar";
+import { Masthead } from "@/components/masthead";
 
-// Editorial dossier type system: a characterful display serif, a readable body
-// serif, and a mono for captions / source credits.
-const display = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
-});
-const serif = Newsreader({
-  subsets: ["latin"],
-  variable: "--font-serif",
-  weight: ["400", "500"],
-  style: ["normal", "italic"],
-});
-const mono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-mono",
-});
+// Comic-book type system: a chunky logo face, a lettering face for captions
+// and sound effects, a friendly grotesk for balloons, a mono for file paths.
+const logo = Luckiest_Guy({ subsets: ["latin"], weight: "400", variable: "--font-logo" });
+const sfx = Bangers({ subsets: ["latin"], weight: "400", variable: "--font-sfx" });
+const body = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-body" });
+const mono = Space_Mono({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "Ask Me — Iannis Vasselet",
+  title: "Ask Iannis! · Iannis Vasselet",
   description:
-    "A conversational, source-grounded briefing on the candidate. Ask anything; every answer cites where it came from.",
+    "The only profile that answers back. Ask anything about Iannis Vasselet; every answer comes with an editor's note pointing to its source.",
 };
 
 export default function RootLayout({
@@ -35,10 +22,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${display.variable} ${serif.variable} ${mono.variable}`}>
+    <html lang="en" className={`${logo.variable} ${sfx.variable} ${body.variable} ${mono.variable}`}>
       <body>
-        <div className="app-grid">
-          <Sidebar />
+        <div className="app">
+          <Masthead />
           {children}
         </div>
       </body>

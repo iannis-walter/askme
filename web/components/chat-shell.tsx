@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PROFILE, SUGGESTED_PROMPTS } from "@/lib/profile";
 import type { AgentStep, Message, Source } from "@/lib/types";
-import { SourceTags } from "@/components/source-tags";
+import { issueFor, type Issue } from "@/lib/issues";
+import { EditorsNotes } from "@/components/editors-notes";
 import { SourceDrawer } from "@/components/source-drawer";
 import { Markdown } from "@/components/markdown";
+import { Cover } from "@/components/cover";
+import { Balloon, Burst, IssueCover, Panel } from "@/components/comic";
 
 export function ChatShell() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -17,7 +19,8 @@ export function ChatShell() {
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    // The cover reads top-down; only the comic page follows the latest panel.
+    if (messages.length) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages]);
 
   async function send(text: string) {
@@ -123,123 +126,176 @@ export function ChatShell() {
     ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
   }
 
-  function formatArgs(args: Record<string, unknown>): string {
-    const entries = Object.entries(args);
-    if (entries.length === 0) return "";
-    return entries.map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(" ");
-  }
-
-  const empty = messages.length === 0;
+  // Pair each question with the answer that follows it: one tier per turn.
+  const turns: { q: Message; a?: Message }[] = [];
+  messages.forEach((m, i) => {
+    if (m.role === "user") turns.push({ q: m, a: messages[i + 1] });
+  });
 
   return (
     <main className="stage">
-      <div className="topbar">
-        <span className="display" style={{ fontSize: 18 }}>{PROFILE.name}</span>
-        <a className="mono" style={{ color: "var(--ember)", fontSize: 13 }} href="/job-fit">Job fit →</a>
-      </div>
-
       <div className="stage-scroll" ref={scrollRef}>
-        <div className="stage-inner">
-          {empty ? (
-            <div className="intro" style={{ paddingTop: "2vh" }}>
-              <div className="eyebrow">Candidate briefing</div>
-              <h1 className="display hero-title">
-                A profile you can <em>interrogate.</em>
-              </h1>
-              <p style={{ color: "var(--muted)", marginTop: 18, maxWidth: 540, fontSize: 19 }}>
-                {PROFILE.subtitle} Every answer is grounded in a curated knowledge
-                base and shows the files it drew from. Nothing invented.
-              </p>
-              <div className="chips">
-                {SUGGESTED_PROMPTS.map((p) => (
-                  <button key={p.label} className="chip" onClick={() => send(p.text)}>
-                    <span className="chip-label">{p.label}</span>
-                    {p.text}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            messages.map((m, i) => (
-              <div key={i} className={`msg ${m.role === "user" ? "msg-user" : "msg-assistant"}`}>
-                <span className="role-tag">{m.role === "user" ? "Question" : "Response"}</span>
-                {m.role === "user" ? (
-                  <div className="qtext">{m.content}</div>
-                ) : (
-                  <>
-                    {m.steps && m.steps.length > 0 && (
-                      <div className="agent-steps">
-                        {m.steps.map((s, si) => (
-                          <span
-                            key={si}
-                            className="agent-step"
-                            style={{ opacity: s.ok ? 1 : 0.6 }}
-                            title={s.error ?? JSON.stringify(s.args)}
-                          >
-                            <span className="mono" style={{ color: "var(--ember)" }}>
-                              {s.ok ? "▸" : "✕"} {s.tool}
-                            </span>
-                            <span className="mono" style={{ color: "var(--muted)", fontSize: 11 }}>
-                              {formatArgs(s.args)}
-                            </span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <div className={`answer ${m.streaming && !m.content ? "caret" : ""}`}>
-                      <Markdown>{m.content}</Markdown>
-                      {m.streaming && m.content ? <span className="caret" /> : null}
-                    </div>
-                    {m.sources && m.sources.length > 0 && (
-                      <SourceTags sources={m.sources} onOpen={setOpenSource} />
-                    )}
-                  </>
-                )}
-              </div>
-            ))
-          )}
-        </div>
+        {turns.length === 0 ? (
+          <Cover onAsk={send} />
+        ) : (
+          <div className="comic-page">
+            {turns.map((t, i) => (
+              <Tier key={i} index={i} q={t.q} a={t.a} onOpen={setOpenSource} />
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="composer-wrap">
-        <div className="composer-controls">
+      <div className="composer-bar">
+        <div className="composer">
+          <Balloon tail="left" className="composer-field">
+            <textarea
+              ref={taRef}
+              value={input}
+              placeholder="Your question here, recruiter…"
+              aria-label="Your question"
+              onChange={(e) => {
+                setInput(e.target.value);
+                autosize();
+              }}
+              onKeyDown={onKeyDown}
+              rows={1}
+            />
+          </Balloon>
+          <div className="composer-side">
+            <div
+              className="modes"
+              role="group"
+              aria-label="Answer mode"
+              title="Agent loop: the model calls tools in a loop (searching the knowledge base itself, possibly several times) instead of a single-shot answer. The searches are shown in their own panel."
+            >
+              <button type="button" className="mode" aria-pressed={!agentMode} onClick={() => setAgentMode(false)}>
+                One-shot
+              </button>
+              <button type="button" className="mode" aria-pressed={agentMode} onClick={() => setAgentMode(true)}>
+                Agent loop
+              </button>
+            </div>
+            <span className="composer-hint">
+              {agentMode ? "tool-use loop · searches shown" : "single-shot · one retrieval"}
+            </span>
+          </div>
           <button
             type="button"
-            className="mono agent-toggle"
-            onClick={() => setAgentMode((v) => !v)}
-            aria-pressed={agentMode}
-            title="Agent mode: the model calls tools in a loop (searching the knowledge base itself, possibly several times) instead of a single-shot answer. The steps are shown above each answer."
-          >
-            {agentMode ? "● Agent mode" : "○ Agent mode"}
-          </button>
-          <span className="mono composer-hint">
-            {agentMode ? "tool-use loop · steps shown" : "single-shot · one retrieval"}
-          </span>
-        </div>
-        <div className="composer">
-          <textarea
-            ref={taRef}
-            value={input}
-            placeholder="Ask anything about the candidate…"
-            onChange={(e) => {
-              setInput(e.target.value);
-              autosize();
-            }}
-            onKeyDown={onKeyDown}
-            rows={1}
-          />
-          <button
-            className="send-btn"
+            className="ask-btn"
             disabled={busy || !input.trim()}
             onClick={() => send(input)}
-            aria-label="Send"
+            aria-label="Ask"
           >
-            Ask
+            <Burst>Ask!</Burst>
           </button>
         </div>
       </div>
 
       <SourceDrawer source={openSource} onClose={() => setOpenSource(null)} />
     </main>
+  );
+}
+
+function formatArgs(args: Record<string, unknown>): string {
+  return Object.values(args)
+    .map((v) => JSON.stringify(v))
+    .join(", ");
+}
+
+// One question and its answer, laid out as a tier of comic panels.
+function Tier({
+  index,
+  q,
+  a,
+  onOpen,
+}: {
+  index: number;
+  q: Message;
+  a?: Message;
+  onOpen: (s: Source) => void;
+}) {
+  const steps = a?.steps ?? [];
+  const sources = a?.sources ?? [];
+  const cited: { issue: Issue; source: Source }[] = [];
+  for (const s of sources) {
+    const issue = issueFor(s);
+    if (issue && !cited.some((c) => c.issue.slug === issue.slug)) cited.push({ issue, source: s });
+  }
+
+  return (
+    <article className="tier">
+      <div className={`tier-row ${steps.length ? "" : "tier-row--solo"}`}>
+        <Panel
+          tone="blue"
+          caption={index === 0 ? "A recruiter asks…" : "Then the recruiter asks…"}
+          className="panel-question"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="panel-mic" src="/art/hero-mic.png" alt="" aria-hidden="true" />
+          <Balloon tail="left" className="q-balloon">
+            <p>{q.content}</p>
+          </Balloon>
+        </Panel>
+        {steps.length > 0 && (
+          <Panel tone="cream" caption="Meanwhile, in the archives…" className="panel-steps">
+            <ol className="calls">
+              {steps.map((s, i) => (
+                <li
+                  key={i}
+                  className={`call ${s.ok ? "" : "call--failed"}`}
+                  style={{ ["--i" as string]: i }}
+                  title={s.error ?? JSON.stringify(s.args)}
+                >
+                  <span className="call-no">{s.ok ? i + 1 : "✕"}</span>
+                  <code>
+                    {s.tool}({formatArgs(s.args)})
+                  </code>
+                </li>
+              ))}
+            </ol>
+            <span className="sfx sfx--riffle" aria-hidden="true">
+              Riffle! Riffle!
+            </span>
+          </Panel>
+        )}
+      </div>
+
+      {a && (
+        <div className={`tier-row ${cited.length ? "" : "tier-row--solo"}`}>
+          <Panel tone="yellow" caption="Iannis answers:" className="panel-answer">
+            <div className="answer-wrap">
+              <Balloon tail="right" className="a-balloon">
+                <div className={`answer ${a.streaming && !a.content ? "caret" : ""}`}>
+                  <Markdown>{a.content}</Markdown>
+                  {a.streaming && a.content ? <span className="caret" /> : null}
+                </div>
+              </Balloon>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="answer-hero" src="/art/hero-avatar.png" alt="" aria-hidden="true" />
+            </div>
+            <EditorsNotes sources={sources} onOpen={onOpen} />
+          </Panel>
+          {cited.length > 0 && (
+            <Panel tone="blue" caption="Back issues cited" className="panel-issues">
+              <div className="issue-stack">
+                {cited.map(({ issue, source }, k) => (
+                  <button
+                    key={issue.slug}
+                    type="button"
+                    className="stack-item"
+                    style={{ ["--k" as string]: k }}
+                    onClick={() => onOpen(source)}
+                    aria-label={`Open issue ${issue.no}: ${issue.title}`}
+                  >
+                    <IssueCover issue={issue} stamped={!a.streaming && k === cited.length - 1} />
+                  </button>
+                ))}
+              </div>
+            </Panel>
+          )}
+        </div>
+      )}
+    </article>
   );
 }
