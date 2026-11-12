@@ -5,7 +5,8 @@
 #
 # Set the two secret/per-deploy values in the Render dashboard (they are
 # sync:false below, so Render prompts for them and never stores them in git):
-#   - LLM_API_KEY     → your Mistral free-tier key (console.mistral.ai)
+#   - LLM_API_KEY     → a Claude API key (platform.claude.com, the Console org
+#                       linked to the Claude Max plan so its monthly credits apply)
 #   - FRONTEND_ORIGIN → your deployed Vercel origin, e.g. https://ask-me.vercel.app
 services:
   - type: web
@@ -17,14 +18,14 @@ services:
     dockerCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
-      - key: LLM_PROVIDER
-        value: mistral
+      - key: LLM_PROVIDER         # Claude: Haiku for CV look-ups, Sonnet for judgment
+        value: anthropic
+      - key: LLM_MODEL_SIMPLE
+        value: claude-haiku-5-5
       - key: LLM_MODEL
-        value: mistral-small-latest
-      - key: LLM_MIN_INTERVAL_S   # respect the Mistral free tier (~1 req/s)
-        value: "1.1"
-      - key: RETRIEVER            # auto → embeddings (Mistral + key), else keyword
-        value: auto
+        value: claude-sonnet-5-5
+      - key: RETRIEVER            # no embeddings API on Claude → keyword retrieval
+        value: keyword
       - key: LLM_API_KEY
         sync: false               # set in dashboard (secret)
       - key: FRONTEND_ORIGIN

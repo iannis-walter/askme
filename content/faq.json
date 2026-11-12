@@ -1,7 +1,7 @@
 [
   {
     "question": "Why are you interested in Mistral?",
-    "answer": "DRAFT_REVIEW_AND_MAKE_IT_YOURS: Three honest reasons. First, Mistral is building a European champion in frontier AI with an open, portable approach and a focus on technological sovereignty — and I've spent years shipping software inside critical, sovereign French environments (Judicial Police, CEA), so that mission isn't abstract to me. Second, the Applied AI Engineer role is exactly the kind of work I'm best at: taking a model and turning it into a real, usable product end to end, with strong fullstack execution and product sense. Third, I ship applied AI as products, not demos (on-device computer vision with TensorFlow.js, this very grounded assistant on the Mistral API) — Mistral's bet on efficient, portable, real-world AI matches how I already build."
+    "answer": "DRAFT_REVIEW_AND_MAKE_IT_YOURS: Three honest reasons. First, Mistral is building a European champion in frontier AI with an open, portable approach and a focus on technological sovereignty — and I've spent years shipping software inside critical, sovereign French environments (Judicial Police, CEA), so that mission isn't abstract to me. Second, the Applied AI Engineer role is exactly the kind of work I'm best at: taking a model and turning it into a real, usable product end to end, with strong fullstack execution and product sense. Third, I ship applied AI as products, not demos (on-device computer vision with TensorFlow.js, this very grounded assistant, built on a provider-agnostic LLM layer that runs on Claude today and can move to the Mistral API with a configuration change) — Mistral's bet on efficient, portable, real-world AI matches how I already build."
   },
   {
     "question": "What proves your full-stack ability?",
@@ -9,7 +9,7 @@
   },
   {
     "question": "Have you worked with LLMs or AI workflows before?",
-    "answer": "Yes, on both the AI and the product side. I deployed computer vision in production (Vigie: COCO-SSD object detection running 100% on-device in the browser with TensorFlow.js), I use AI-assisted development daily at Walter Learning, and this 'Ask Me' assistant is itself an LLM product built on the Mistral API — grounded retrieval over a structured knowledge base, with visible sources, so answers stay factual."
+    "answer": "Yes, on both the AI and the product side. I deployed computer vision in production (Vigie: COCO-SSD object detection running 100% on-device in the browser with TensorFlow.js), I use AI-assisted development daily at Walter Learning, and this 'Ask Me' assistant is itself an LLM product built on the Claude API — Claude Haiku answers the questions that can be read off my CV, Claude Sonnet the ones that need judgment — with grounded retrieval over a structured knowledge base, with visible sources, so answers stay factual."
   },
   {
     "question": "How deep is your C++ / systems engineering?",

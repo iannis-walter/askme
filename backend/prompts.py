@@ -37,6 +37,20 @@ Return a JSON object with EXACTLY these keys:
 Return ONLY the JSON object, no markdown, no commentary.
 """
 
+# Structured-output schema for the job-fit report (enforced on Claude).
+JOB_FIT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "summary": {"type": "string"},
+        "strengths": {"type": "array", "items": {"type": "string"}},
+        "gaps": {"type": "array", "items": {"type": "string"}},
+        "relevant_projects": {"type": "array", "items": {"type": "string"}},
+        "pitch": {"type": "string"},
+    },
+    "required": ["summary", "strengths", "gaps", "relevant_projects", "pitch"],
+    "additionalProperties": False,
+}
+
 
 # Shared grounding + anti-injection contract for the agentic loop. The model
 # drives its own retrieval through tools instead of receiving a single context
