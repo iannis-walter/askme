@@ -13,7 +13,7 @@ agent needs:
   * every failure mode degrades to a clean answer — never a raw exception.
 
 Two interchangeable backends keep it multi-provider: NATIVE function calling
-(Mistral/Groq/OpenRouter) and a hand-parsed ReAct fallback (Ollama / small
+(Claude/Mistral/Groq/OpenRouter) and a hand-parsed ReAct fallback (Ollama / small
 models). The loop itself is backend-agnostic.
 """
 from __future__ import annotations
@@ -35,7 +35,7 @@ from tracing import StepTrace, Trace
 
 EventSink = Callable[[dict], Awaitable[None]]
 
-_NATIVE_PROVIDERS = {"mistral", "groq", "openrouter"}
+_NATIVE_PROVIDERS = {"anthropic", "mistral", "groq", "openrouter"}
 
 _FALLBACK_ANSWER = (
     "I couldn't gather enough grounded information to answer reliably. "

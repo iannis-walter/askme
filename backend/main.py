@@ -103,7 +103,10 @@ async def chat(
         yield (json.dumps({"type": "sources", "sources": [s.model_dump() for s in sources]}) + "\n").encode()
         history = [t.model_dump() for t in req.conversation]
         messages = prompts.build_chat_messages(req.message, chunks, history)
-        async for delta in llm_client.stream_chat(messages):
+        # Claude only: CV look-ups go to the cheap model, judgment calls to the strong one.
+        tier = await llm_client.route_question(req.message, history)
+        print(f"[ask-me] chat tier={tier} model={llm_client.LLMConfig().model_for(tier)}")
+        async for delta in llm_client.stream_chat(messages, tier=tier):
             yield (json.dumps({"type": "delta", "text": delta}) + "\n").encode()
         yield (json.dumps({"type": "done"}) + "\n").encode()
 
@@ -206,7 +209,7 @@ async def job_fit(req: JobFitRequest, _rate: None = Depends(jobfit_rate)):
 
     messages = prompts.build_job_fit_messages(req.job_description, req.focus, chunks)
     try:
-        data = await llm_client.complete_json(messages)
+        data = await llm_client.complete_json(messages, schema=prompts.JOB_FIT_SCHEMA)
     except Exception as exc:  # noqa: BLE001 - surface a clean error to the UI
         return JobFitResponse(
             summary=f"Could not generate a fit report: {exc}",

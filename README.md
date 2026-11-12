@@ -28,10 +28,10 @@ The split is deliberate:
 - **`backend/` — Python / FastAPI** owns the applied-AI work: loading the
   knowledge base, retrieving and ranking the most relevant chunks, building
   grounded prompts, and orchestrating the LLM (streaming + JSON) through a
-  provider-agnostic client (Ollama, Groq, Mistral, OpenRouter — switched by env).
+  provider-agnostic client (Claude, Ollama, Groq, Mistral, OpenRouter — switched by env).
 - **`web/` — Next.js 15 / TypeScript** is the product layer: the conversational
   UI and thin route handlers that proxy to the backend. The browser never holds
-  the API key or talks to Mistral directly.
+  the API key or talks to the model provider directly.
 
 ```
 ask-me/
@@ -71,14 +71,15 @@ positives on legitimate job descriptions.
 
 ## The LLM layer (provider-agnostic)
 
-The backend speaks the **OpenAI-compatible Chat Completions API**, so the model
-provider is just configuration — no code changes to switch. See
-[`backend/llm_client.py`](backend/llm_client.py).
+The backend speaks the **OpenAI-compatible Chat Completions API**, plus Claude
+through the official Anthropic SDK, so the model provider is just configuration —
+no code changes to switch. See [`backend/llm_client.py`](backend/llm_client.py).
 
 | `LLM_PROVIDER` | Use for | Cost | Key |
 | -------------- | ------- | ---- | --- |
 | `ollama` (default) | Local dev — runs an open-source model on your machine | Free | None |
-| `mistral` | **Production** — Mistral's "Free mode" (~1 req/s, ~1B tok/mo) | Free tier | `LLM_API_KEY` |
+| `anthropic` | **Production** — Claude, two tiers (see below) | Claude Max monthly API credits | `LLM_API_KEY` |
+| `mistral` | Alt: Mistral's "Free mode" (~1 req/s, ~1B tok/mo) | Free tier | `LLM_API_KEY` |
 | `groq` | Alt: open-source models (Llama 3.3) hosted for you | Free tier | `LLM_API_KEY` |
 | `openrouter` | Alt: wide model choice, incl. free models | Free tier+ | `LLM_API_KEY` |
 
@@ -86,10 +87,19 @@ Each provider has preset URL + model; override with `LLM_MODEL` / `LLM_API_URL`.
 `LLM_MIN_INTERVAL_S` paces upstream calls (set to `1.1` for the Mistral free tier
 so concurrent visitors queue instead of hitting its ~1 req/s cap).
 
+**Two tiers on Claude.** Before answering in `/chat`, a quick Claude Haiku call
+sorts the question: facts you can read off the CV (years of experience, stack,
+dates) are answered by `LLM_MODEL_SIMPLE` (Claude Haiku 5.5); questions that need
+judgment ("why is he a good fit for this role?") go to `LLM_MODEL` (Claude Sonnet
+5.5). If the router fails or hesitates, the question goes to Sonnet. Agent mode
+and job-fit always use Sonnet. The chosen tier is logged per request
+(`[ask-me] chat tier=...`); `LLM_ROUTING=off` disables routing. Claude has no
+embeddings API, so retrieval runs in keyword mode with this provider.
+
 > **Why not run the model inside the deployment?** A serverless host (Vercel)
 > has no GPU, tight memory/time limits, and ephemeral functions — it cannot host
-> an LLM. The model always runs elsewhere; in production that's the Mistral API
-> (free tier), reached over HTTP exactly like any other provider.
+> an LLM. The model always runs elsewhere; in production that's the Claude API,
+> reached over HTTP like any other provider.
 
 ## Agent (tool-use loop)
 
@@ -232,20 +242,21 @@ just restart — no cache step.)
 ## Deployment (free, end-to-end)
 
 Three pieces, each where it belongs — the model is **never** inside the Vercel
-deployment. Total cost: **$0**.
+deployment. Hosting is free; the model runs on the monthly Claude API credits
+included with a Claude Max plan.
 
 ```
 Browser → Vercel Hobby (web/, Next.js UI + proxy routes)     ← free
             → Render free (backend/, FastAPI: retrieval + prompts)   ← free
-              → Mistral API, Free mode (the model runs here, over HTTP)   ← free
+              → Claude API (the model runs here, over HTTP)   ← Max plan API credits
 ```
 
 **Backend → Render** (Blueprint in [`render.yaml`](render.yaml)): New → Blueprint →
 this repo. The Dockerfile builds from the repo root so `content/` is baked in.
-Set two secrets in the dashboard: `LLM_API_KEY` (your Mistral free-tier key) and
-`FRONTEND_ORIGIN` (`https://<your-app>.vercel.app`, for CORS). The rest
-(`LLM_PROVIDER=mistral`, model, `LLM_MIN_INTERVAL_S=1.1`) is preset in the
-blueprint. Note: the free plan sleeps after ~15 min idle, so the first request
+Set two secrets in the dashboard: `LLM_API_KEY` (a Claude API key from the Console
+organization linked to your Claude Max plan) and `FRONTEND_ORIGIN`
+(`https://<your-app>.vercel.app`, for CORS). The rest (`LLM_PROVIDER=anthropic`,
+both models, `RETRIEVER=keyword`) is preset in the blueprint. Note: the free plan sleeps after ~15 min idle, so the first request
 after a pause has a ~30-50s cold start.
 
 **Front-end → Vercel** (config in [`web/vercel.json`](web/vercel.json)): set the
@@ -254,8 +265,8 @@ at the Render URL. Vercel hosts only the UI — no API key ever lives here.
 
 **Rate limiting** is built in: per-IP sliding-window limits on `/chat` and
 `/job-fit` (abuse protection, [`backend/ratelimit.py`](backend/ratelimit.py)),
-plus upstream pacing (`LLM_MIN_INTERVAL_S`) so concurrent visitors queue rather
-than tripping the Mistral free-tier cap.
+plus optional upstream pacing (`LLM_MIN_INTERVAL_S`, useful on rate-capped free
+tiers such as Mistral's) so concurrent visitors queue rather than tripping the cap.
 
 ## Possible next steps
 
