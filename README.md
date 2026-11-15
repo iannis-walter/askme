@@ -29,7 +29,7 @@ The split is deliberate:
   knowledge base, retrieving and ranking the most relevant chunks, building
   grounded prompts, and orchestrating the LLM (streaming + JSON) through a
   provider-agnostic client (Claude, Ollama, Groq, Mistral, OpenRouter — switched by env).
-- **`web/` — Next.js 15 / TypeScript** is the product layer: the conversational
+- **`web/` — Next.js 16 / TypeScript** is the product layer: the conversational
   UI and thin route handlers that proxy to the backend. The browser never holds
   the API key or talks to the model provider directly.
 
