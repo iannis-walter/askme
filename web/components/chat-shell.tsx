@@ -102,7 +102,7 @@ export function ChatShell() {
         next[next.length - 1] = {
           role: "assistant",
           content:
-            "Something went wrong reaching the assistant. Check that the backend is running and the Mistral key is set.",
+            "Something went wrong reaching the assistant. Please try again in a moment.",
           streaming: false,
         };
         return next;

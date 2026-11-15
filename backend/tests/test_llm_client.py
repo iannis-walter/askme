@@ -202,3 +202,33 @@ def test_router_failure_falls_back_to_complex(monkeypatch):
     _anthropic_env(monkeypatch)
     _fake_client(monkeypatch, _FakeMessages(error=RuntimeError("boom")))
     assert asyncio.run(llm_client.route_question("Why is he a good fit?")) == "complex"
+
+
+# --- output cap ---------------------------------------------------------------
+
+def _capture_claude_call(monkeypatch):
+    reply = SimpleNamespace(stop_reason="end_turn", usage=_usage(), content=[SimpleNamespace(type="text", text="hi")])
+    fake = _FakeMessages(reply=reply)
+    client = SimpleNamespace(messages=fake, beta=SimpleNamespace(messages=fake))
+    client.with_options = lambda **_: client
+    monkeypatch.setattr(llm_client, "_anthropic_client", lambda cfg: client)
+    return fake
+
+
+def test_claude_output_is_capped_well_below_the_old_16000_tokens(monkeypatch):
+    _anthropic_env(monkeypatch)
+    monkeypatch.delenv("LLM_MAX_TOKENS", raising=False)
+    fake = _capture_claude_call(monkeypatch)
+
+    asyncio.run(llm_client.complete_chat([{"role": "user", "content": "q"}]))
+
+    assert fake.calls[0]["max_tokens"] == 4096
+
+
+def test_claude_output_cap_follows_llm_max_tokens(monkeypatch):
+    _anthropic_env(monkeypatch, LLM_MAX_TOKENS="1234")
+    fake = _capture_claude_call(monkeypatch)
+
+    asyncio.run(llm_client.complete_chat([{"role": "user", "content": "q"}]))
+
+    assert fake.calls[0]["max_tokens"] == 1234

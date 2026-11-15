@@ -69,6 +69,24 @@ with a trailing reminder, and Pydantic caps input length and turn count
 attempts (`backend/guards.py`) for visibility — it does not block, to avoid false
 positives on legitimate job descriptions.
 
+The service is public and unauthenticated, and every question spends API
+credits, so the rest of the protection is about abuse and cost:
+
+- **Only the front-end may call the backend.** With `BACKEND_SHARED_SECRET` set
+  on both sides, the Next.js proxy sends it with every call and the backend
+  refuses anything else (`/health` excepted) —
+  [`backend/security.py`](backend/security.py), [`web/lib/backend.ts`](web/lib/backend.ts).
+- **Rate limits apply per visitor.** Behind a proxy the socket address is the
+  proxy's, so the front-end forwards the visitor's address (as Vercel reports it)
+  and the backend believes it only alongside the secret.
+- **A daily budget caps total spend** (`DAILY_REQUEST_BUDGET`), whoever sends the
+  traffic, and `LLM_MAX_TOKENS` caps the output of each call. Set a spend limit
+  in the Claude Console as well: it is the only hard stop.
+- **Request bodies over 1 MB get a 413**, provider errors are logged rather than
+  shown to visitors, the interactive API docs are off unless `EXPOSE_DOCS=1`, and
+  the front-end sends a Content-Security-Policy and anti-framing headers
+  ([`web/next.config.mjs`](web/next.config.mjs)).
+
 ## The LLM layer (provider-agnostic)
 
 The backend speaks the **OpenAI-compatible Chat Completions API**, plus Claude
@@ -153,8 +171,10 @@ optional **Agent** toggle in the chat UI renders those steps inline.
 **Tracing / observability** ([`tracing.py`](backend/tracing.py)) — every request
 gets a `request_id` and a structured trace: each step (LLM turn or tool call),
 its latency, tokens in/out, provider/model, arguments, a truncated result, and a
-`stop_reason` (`completed` | `max_steps` | `loop_detected` | `error`). Read it at
-`GET /trace/{request_id}`, or attach it to the final event with `?debug=1`.
+`stop_reason` (`completed` | `max_steps` | `loop_detected` | `error`). With
+`AGENT_DEBUG=1` it is attached to the final event and served at
+`GET /trace/{request_id}`; it is off by default so a public deploy does not hand
+its internals to anonymous callers.
 
 **Eval suite** ([`backend/eval/`](backend/eval/)) — `cases.json` holds ~14 cases
 (`question`, `expected_facts`, `must_cite`, plus injection/honesty traps). The
@@ -233,9 +253,9 @@ just restart — no cache step.)
 | Method | Route        | Purpose                                              |
 | ------ | ------------ | ---------------------------------------------------- |
 | POST   | `/chat`      | Single-shot streamed answer (NDJSON: `sources` → `delta`s → `done`) |
-| POST   | `/chat/agent`| Agentic answer: tool-use loop, streams `sources` / `step` / `delta` / `done` (`?debug=1` attaches the trace) |
+| POST   | `/chat/agent`| Agentic answer: tool-use loop, streams `sources` / `step` / `delta` / `done` (`AGENT_DEBUG=1` attaches the trace) |
 | POST   | `/job-fit`   | Structured fit report for a pasted job description   |
-| GET    | `/trace/{request_id}` | Structured trace of an agent request (steps, latency, tokens) |
+| GET    | `/trace/{request_id}` | Structured trace of an agent request (steps, latency, tokens) — only with `AGENT_DEBUG=1` |
 | GET    | `/sources`   | Raw content of one source, for the UI drawer         |
 | GET    | `/health`    | Liveness + document count                            |
 
@@ -253,19 +273,28 @@ Browser → Vercel Hobby (web/, Next.js UI + proxy routes)     ← free
 
 **Backend → Render** (Blueprint in [`render.yaml`](render.yaml)): New → Blueprint →
 this repo. The Dockerfile builds from the repo root so `content/` is baked in.
-Set two secrets in the dashboard: `LLM_API_KEY` (a Claude API key from the Console
-organization linked to your Claude Max plan) and `FRONTEND_ORIGIN`
-(`https://<your-app>.vercel.app`, for CORS). The rest (`LLM_PROVIDER=anthropic`,
+Set three secrets in the dashboard: `LLM_API_KEY` (a Claude API key from the Console
+organization linked to your Claude Max plan), `FRONTEND_ORIGIN`
+(`https://<your-app>.vercel.app`, for CORS) and `BACKEND_SHARED_SECRET` (a long
+random string, see below). The rest (`LLM_PROVIDER=anthropic`,
 both models, `RETRIEVER=keyword`) is preset in the blueprint. Note: the free plan sleeps after ~15 min idle, so the first request
 after a pause has a ~30-50s cold start.
 
 **Front-end → Vercel** (config in [`web/vercel.json`](web/vercel.json)): set the
-project **Root Directory** to `web/`, and add one env var `BACKEND_URL` pointing
-at the Render URL. Vercel hosts only the UI — no API key ever lives here.
+project **Root Directory** to `web/`, and add two env vars: `BACKEND_URL` pointing
+at the Render URL, and `BACKEND_SHARED_SECRET`. Vercel hosts only the UI — no API
+key ever lives here.
 
-**Rate limiting** is built in: per-IP sliding-window limits on `/chat` and
-`/job-fit` (abuse protection, [`backend/ratelimit.py`](backend/ratelimit.py)),
-plus optional upstream pacing (`LLM_MIN_INTERVAL_S`, useful on rate-capped free
+**Shared secret**: generate one
+(`python -c "import secrets; print(secrets.token_urlsafe(32))"`) and set the same
+value as `BACKEND_SHARED_SECRET` on Vercel **first** (then redeploy), and on
+Render second. In that order nothing breaks: the front-end starts sending the
+secret before the backend starts requiring it.
+
+**Rate limiting** is built in: per-visitor sliding-window limits on `/chat`,
+`/chat/agent` and `/job-fit`, plus a service-wide daily budget (abuse protection,
+[`backend/ratelimit.py`](backend/ratelimit.py)),
+and optional upstream pacing (`LLM_MIN_INTERVAL_S`, useful on rate-capped free
 tiers such as Mistral's) so concurrent visitors queue rather than tripping the cap.
 
 ## Possible next steps

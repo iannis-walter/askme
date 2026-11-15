@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import agent
 import llm_client
@@ -221,3 +222,21 @@ def test_select_backend_auto_by_provider():
     assert agent.select_backend(AgentConfig(mode="auto"), "ollama").mode == "react"
     assert agent.select_backend(AgentConfig(mode="react"), "mistral").mode == "react"
     assert agent.select_backend(AgentConfig(mode="native"), "ollama").mode == "native"
+
+
+def test_tool_crash_does_not_stream_the_exception_text():
+    class ExplodingRetriever:
+        async def retrieve(self, query, k=6):
+            raise RuntimeError("connect failed: https://internal-gateway.example key=abc123")
+
+    backend = ScriptedBackend([
+        _tool_step("search_kb", {"query": "anything", "top_k": 2}),
+        Step(kind="final", final_text="answered despite the crash"),
+    ])
+    events = []
+    outcome = _run(backend, ctx=_ctx(retriever=ExplodingRetriever()), events=events)
+
+    assert outcome.answer == "answered despite the crash"
+    step = next(e for e in events if e.get("type") == "step")
+    assert step["ok"] is False
+    assert "internal-gateway" not in json.dumps(events)
