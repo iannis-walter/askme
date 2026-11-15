@@ -19,6 +19,7 @@ questions that need judgment ("complex"). `route_question` picks the tier.
   LLM_EFFORT_SIMPLE    effort for the simple tier  (default: low)
   LLM_EFFORT_COMPLEX   effort for the complex tier (default: medium)
   LLM_ROUTING          on | off — off sends everything to the complex tier
+  LLM_MAX_TOKENS       output cap per call, thinking included (default: 4096)
 
 Typical setups:
   - Local dev   → Ollama (LLM_PROVIDER=ollama): free, no key, fully private.
@@ -97,6 +98,15 @@ class LLMConfig:
         return os.getenv("LLM_EFFORT_COMPLEX", "medium")
 
     @property
+    def max_tokens(self) -> int:
+        """Output cap per Claude call. Answers here are short; the cap bounds the
+        worst-case cost of a single request on a public, unauthenticated service."""
+        try:
+            return int(os.getenv("LLM_MAX_TOKENS", "") or 4096)
+        except ValueError:
+            return 4096
+
+    @property
     def needs_key(self) -> bool:
         return self.provider != "ollama"
 
@@ -109,6 +119,11 @@ class LLMConfig:
 
 def _config() -> LLMConfig:
     return LLMConfig()
+
+
+# What a visitor sees when the provider fails. The cause goes to the server log
+# only: upstream error bodies can name keys, quotas, organisations or internal URLs.
+UNAVAILABLE_TEXT = "[The assistant is temporarily unavailable. Please try again in a moment.]"
 
 
 # An async gate that spaces upstream calls out to respect the provider's rate
@@ -138,7 +153,8 @@ async def stream_chat(messages: list[dict], *, tier: str = "complex") -> AsyncIt
     """
     cfg = _config()
     if cfg.needs_key and not cfg.api_key:
-        yield f"[Configuration error: no API key set for provider '{cfg.provider}'.]"
+        print(f"[ask-me] no API key set for provider '{cfg.provider}'")
+        yield UNAVAILABLE_TEXT
         return
     if cfg.is_anthropic:
         async for delta in _anthropic_stream(cfg, messages, tier):
@@ -148,25 +164,30 @@ async def stream_chat(messages: list[dict], *, tier: str = "complex") -> AsyncIt
     await _respect_rate_limit()
     payload = {"model": cfg.model, "messages": messages, "stream": True, "temperature": 0.2}
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        async with client.stream("POST", cfg.url, json=payload, headers=cfg.headers()) as resp:
-            if resp.status_code != 200:
-                body = (await resp.aread()).decode("utf-8", "ignore")
-                yield f"[LLM API error {resp.status_code}: {body[:300]}]"
-                return
-            async for line in resp.aiter_lines():
-                if not line or not line.startswith("data:"):
-                    continue
-                data = line[len("data:"):].strip()
-                if data == "[DONE]":
-                    break
-                try:
-                    chunk = json.loads(data)
-                    delta = chunk["choices"][0]["delta"].get("content")
-                    if delta:
-                        yield delta
-                except (json.JSONDecodeError, KeyError, IndexError):
-                    continue
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            async with client.stream("POST", cfg.url, json=payload, headers=cfg.headers()) as resp:
+                if resp.status_code != 200:
+                    body = (await resp.aread()).decode("utf-8", "ignore")
+                    print(f"[ask-me] LLM API error {resp.status_code}: {body[:300]}")
+                    yield UNAVAILABLE_TEXT
+                    return
+                async for line in resp.aiter_lines():
+                    if not line or not line.startswith("data:"):
+                        continue
+                    data = line[len("data:"):].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data)
+                        delta = chunk["choices"][0]["delta"].get("content")
+                        if delta:
+                            yield delta
+                    except (json.JSONDecodeError, KeyError, IndexError):
+                        continue
+    except httpx.HTTPError as exc:
+        print(f"[ask-me] could not reach the LLM API: {exc!r}")
+        yield UNAVAILABLE_TEXT
 
 
 @dataclass
@@ -445,7 +466,7 @@ async def _anthropic_complete(
     timeout: float = 60.0,
 ) -> ChatResult:
     beta, kwargs = _anthropic_request(
-        cfg, messages, tier, max_tokens=16000, tools=tools, stop=stop, output_format=output_format
+        cfg, messages, tier, max_tokens=cfg.max_tokens, tools=tools, stop=stop, output_format=output_format
     )
     client = _anthropic_client(cfg).with_options(timeout=timeout)
     msg = await _messages_api(client, beta).create(**kwargs)
@@ -453,7 +474,7 @@ async def _anthropic_complete(
 
 
 async def _anthropic_stream(cfg: LLMConfig, messages: list[dict], tier: str) -> AsyncIterator[str]:
-    beta, kwargs = _anthropic_request(cfg, messages, tier, max_tokens=16000)
+    beta, kwargs = _anthropic_request(cfg, messages, tier, max_tokens=cfg.max_tokens)
     client = _anthropic_client(cfg)
     emitted = False
     try:
@@ -465,9 +486,11 @@ async def _anthropic_stream(cfg: LLMConfig, messages: list[dict], tier: str) -> 
         if final.stop_reason == "refusal" and not emitted:
             yield REFUSAL_TEXT
     except anthropic.APIStatusError as exc:
-        yield f"[LLM API error {exc.status_code}: {str(exc.message)[:300]}]"
-    except anthropic.APIConnectionError:
-        yield "[LLM API error: could not reach the Claude API.]"
+        print(f"[ask-me] Claude API error {exc.status_code}: {str(exc.message)[:300]}")
+        yield UNAVAILABLE_TEXT
+    except anthropic.APIConnectionError as exc:
+        print(f"[ask-me] could not reach the Claude API: {exc!r}")
+        yield UNAVAILABLE_TEXT
 
 
 # --- Question routing (Claude only) --------------------------------------------

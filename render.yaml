@@ -3,11 +3,14 @@
 # after ~15 min idle, so the first request after a pause has a cold start
 # (~30-50s) — fine for a portfolio.
 #
-# Set the two secret/per-deploy values in the Render dashboard (they are
+# Set the three secret/per-deploy values in the Render dashboard (they are
 # sync:false below, so Render prompts for them and never stores them in git):
 #   - LLM_API_KEY     → a Claude API key (platform.claude.com, the Console org
 #                       linked to the Claude Max plan so its monthly credits apply)
 #   - FRONTEND_ORIGIN → your deployed Vercel origin, e.g. https://ask-me.vercel.app
+#   - BACKEND_SHARED_SECRET → a long random string, the SAME value as the Vercel
+#                       project's BACKEND_SHARED_SECRET. Set it on Vercel first:
+#                       once it is set here, calls without it are refused.
 services:
   - type: web
     name: ask-me-backend
@@ -30,3 +33,5 @@ services:
         sync: false               # set in dashboard (secret)
       - key: FRONTEND_ORIGIN
         sync: false               # set to your Vercel URL (CORS)
+      - key: BACKEND_SHARED_SECRET
+        sync: false               # same value as on Vercel (secret)

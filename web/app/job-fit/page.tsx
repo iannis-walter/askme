@@ -29,7 +29,7 @@ export default function JobFitPage() {
       setResult(await res.json());
     } catch {
       setResult({
-        summary: "Something went wrong. Check the backend and the Mistral key.",
+        summary: "Something went wrong. Please try again in a moment.",
         strengths: [],
         gaps: [],
         relevant_projects: [],

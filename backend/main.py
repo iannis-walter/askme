@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -23,8 +23,9 @@ import agent
 import guards
 import llm_client
 import prompts
+import security
 from content_loader import all_chunks, load_documents
-from ratelimit import RateLimiter
+from ratelimit import DailyBudget, RateLimiter
 from retrieve import build_retriever
 from schemas import ChatRequest, JobFitRequest, JobFitResponse, Source
 from tools import ToolContext
@@ -47,14 +48,30 @@ async def lifespan(app: FastAPI):
     STATE.clear()
 
 
-app = FastAPI(title="Ask Me — Candidate API", lifespan=lifespan)
+def _flag(name: str) -> bool:
+    return os.getenv(name, "").lower() in ("1", "true")
 
-# Per-IP rate limiting (abuse protection). The upstream free-tier pacing lives in
-# llm_client; these guard the service itself against a single client hammering it.
+
+# Interactive docs and the OpenAPI schema are a dev convenience; off unless asked for.
+_docs = {} if _flag("EXPOSE_DOCS") else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+
+app = FastAPI(
+    title="Ask Me — Candidate API",
+    lifespan=lifespan,
+    dependencies=[Depends(security.require_proxy_secret)],
+    **_docs,
+)
+
+# Per-visitor rate limiting (abuse protection). The upstream free-tier pacing lives
+# in llm_client; these guard the service itself against a single client hammering it.
 chat_burst = RateLimiter(limit=5, window_s=1.0)     # no bursts
 chat_rate = RateLimiter(limit=30, window_s=60.0)    # sustained per minute
 jobfit_rate = RateLimiter(limit=10, window_s=60.0)  # heavier call, tighter cap
 agent_rate = RateLimiter(limit=12, window_s=60.0)   # multi-call loop, tightest cap
+
+# Service-wide ceiling on LLM-backed requests per day, whoever sends them. Each
+# route charges roughly what it costs in model calls.
+daily_budget = DailyBudget()
 
 # In-memory trace store for /trace/{request_id} and debug responses.
 TRACES = TraceStore(capacity=200)
@@ -65,6 +82,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(security.BodySizeLimitMiddleware, max_bytes=int(os.getenv("MAX_BODY_BYTES", "") or 1_000_000))
 
 
 def _dedupe_sources(scored) -> list[Source]:
@@ -90,6 +108,7 @@ async def chat(
     req: ChatRequest,
     _burst: None = Depends(chat_burst),
     _rate: None = Depends(chat_rate),
+    _budget: None = Depends(daily_budget.charge(1)),
 ):
     if guards.looks_like_injection(req.message):
         print("[ask-me] possible prompt injection detected in chat message")
@@ -128,18 +147,20 @@ async def chat_agent(
     request: Request,
     _burst: None = Depends(chat_burst),
     _rate: None = Depends(agent_rate),
+    _budget: None = Depends(daily_budget.charge(4)),
 ):
     """Agentic counterpart of /chat: the model drives its own tool calls in a loop.
 
     Streams NDJSON the front-end already understands (`sources`, `delta`, `done`)
-    plus a `step` event per tool call. `?debug=1` (or AGENT_DEBUG=1) attaches the
-    full trace to the final event.
+    plus a `step` event per tool call. AGENT_DEBUG=1 attaches the full trace to
+    the final event and serves it at /trace/{request_id}; it is off by default so
+    a public deploy does not hand its internals to anonymous callers.
     """
     if guards.looks_like_injection(req.message):
         print("[ask-me] possible prompt injection detected in agent message")
 
     request_id = uuid.uuid4().hex
-    debug = request.query_params.get("debug") in ("1", "true") or os.getenv("AGENT_DEBUG") in ("1", "true")
+    debug = _flag("AGENT_DEBUG")
     ctx = ToolContext(retriever=STATE["retriever"], docs=STATE["docs"])
     history = [t.model_dump() for t in req.conversation]
 
@@ -155,7 +176,8 @@ async def chat_agent(
             )
             await queue.put({"type": "__final__", "outcome": outcome})
         except Exception as exc:  # noqa: BLE001 - last-resort guard; run_agent already degrades
-            await queue.put({"type": "__error__", "error": str(exc)})
+            print(f"[ask-me] agent run failed: {exc!r}")
+            await queue.put({"type": "__error__"})
 
     async def event_stream() -> AsyncIterator[bytes]:
         task = asyncio.create_task(runner())
@@ -188,14 +210,18 @@ async def chat_agent(
 
 @app.get("/trace/{request_id}")
 async def get_trace(request_id: str):
-    trace = TRACES.get(request_id)
+    trace = TRACES.get(request_id) if _flag("AGENT_DEBUG") else None
     if not trace:
-        return {"error": "not found"}
+        raise HTTPException(status_code=404, detail="Not found")
     return trace.to_dict()
 
 
 @app.post("/job-fit", response_model=JobFitResponse)
-async def job_fit(req: JobFitRequest, _rate: None = Depends(jobfit_rate)):
+async def job_fit(
+    req: JobFitRequest,
+    _rate: None = Depends(jobfit_rate),
+    _budget: None = Depends(daily_budget.charge(2)),
+):
     if guards.looks_like_injection(req.job_description) or (
         req.focus and guards.looks_like_injection(req.focus)
     ):
@@ -211,8 +237,11 @@ async def job_fit(req: JobFitRequest, _rate: None = Depends(jobfit_rate)):
     try:
         data = await llm_client.complete_json(messages, schema=prompts.JOB_FIT_SCHEMA)
     except Exception as exc:  # noqa: BLE001 - surface a clean error to the UI
+        # The detail stays in the server log: provider errors can name internal
+        # URLs, quotas or account state that visitors have no business seeing.
+        print(f"[ask-me] job-fit failed: {exc!r}")
         return JobFitResponse(
-            summary=f"Could not generate a fit report: {exc}",
+            summary="The fit report could not be generated right now. Please try again in a moment.",
             strengths=[],
             gaps=[],
             relevant_projects=[],

@@ -344,7 +344,10 @@ async def run_agent(
             except asyncio.TimeoutError:
                 ok, content, new_sources = False, f"Tool {call.name} timed out after {cfg.tool_timeout_s:.0f}s.", []
             except Exception as exc:  # noqa: BLE001 - a tool must never crash the loop
-                ok, content, new_sources = False, f"Tool {call.name} failed: {exc}", []
+                # The exception text stays in the log: this content is streamed to
+                # the client in the `step` event, and may name internal hosts.
+                print(f"[ask-me] tool {call.name} failed: {exc!r}")
+                ok, content, new_sources = False, f"Tool {call.name} failed.", []
 
             await self_emit_tool(
                 emit, trace, step_idx, call, ok=ok, content=content, t0=tool_t0, args_dump=args.model_dump()
