@@ -29,6 +29,8 @@ services:
         value: claude-sonnet-5-5
       - key: RETRIEVER            # no embeddings API on Claude → keyword retrieval
         value: keyword
+      - key: DAILY_REQUEST_BUDGET # service-wide cap per UTC day (chat=1, job-fit=2, agent=4),
+        value: "200"              # sized so abuse cannot spend the monthly API credits
       - key: LLM_API_KEY
         sync: false               # set in dashboard (secret)
       - key: FRONTEND_ORIGIN
