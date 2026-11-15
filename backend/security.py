@@ -46,7 +46,10 @@ def client_ip(request: Request) -> str:
 
 async def require_proxy_secret(request: Request) -> None:
     """App-wide dependency: once a secret is configured, only our proxy gets in."""
-    if not _secret() or request.url.path == "/health":
+    # Compare the path the router matched, not request.url: Starlette rebuilds the
+    # URL from the Host header, so a caller sending "Host: x/health?" would make
+    # request.url.path read "/health" on any route and walk straight through.
+    if not _secret() or request.scope.get("path") == "/health":
         return
     if not from_trusted_proxy(request):
         raise HTTPException(status_code=403, detail="Forbidden")
