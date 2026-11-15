@@ -140,6 +140,19 @@ def test_requests_without_the_proxy_secret_are_refused_once_one_is_configured(mo
     assert [no_header.status_code, wrong_header.status_code, sources.status_code] == [403, 403, 403]
 
 
+def test_a_crafted_host_header_does_not_get_past_the_proxy_secret(monkeypatch):
+    # Starlette rebuilds request.url from the Host header, so "host/health?" makes
+    # the URL's path read "/health" while the request is still routed to /chat.
+    monkeypatch.setenv("BACKEND_SHARED_SECRET", SECRET)
+
+    chat_response, sources = send(
+        ("POST", "/chat", {"json": {"message": "hi"}, "headers": {"Host": "backend/health?"}}),
+        ("GET", "/sources?id=bio", {"headers": {"Host": "backend/health#"}}),
+    )
+
+    assert [chat_response.status_code, sources.status_code] == [403, 403]
+
+
 def test_health_check_needs_no_secret(monkeypatch):
     monkeypatch.setenv("BACKEND_SHARED_SECRET", SECRET)
 
